@@ -22,6 +22,7 @@
     <ProjectReference Include="..\DocuMind.Application\DocuMind.Application.csproj" />
     <ProjectReference Include="..\DocuMind.Domain\DocuMind.Domain.csproj" />
     <ProjectReference Include="..\DocuMind.Infrastructure\DocuMind.Infrastructure.csproj" />
+    <ProjectReference Include="..\DocuMind.Api\DocuMind.Api.csproj" />
   </ItemGroup>
 
 </Project>
