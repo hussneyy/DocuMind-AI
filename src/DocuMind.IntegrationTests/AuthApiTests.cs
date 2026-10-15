@@ -4,7 +4,8 @@ using DocuMind.Application.Auth;
 
 namespace DocuMind.IntegrationTests;
 
-public class AuthApiTests : IClassFixture<DocuMindApiFactory>
+[Collection(DocuMindApiCollection.Name)]
+public class AuthApiTests
 {
     private readonly DocuMindApiFactory _factory;
 

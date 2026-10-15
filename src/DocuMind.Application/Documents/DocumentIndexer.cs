@@ -1,7 +1,9 @@
+using DocuMind.Application.Embeddings;
 using DocuMind.Domain.Entities;
 using DocuMind.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Pgvector;
 
 namespace DocuMind.Application.Documents;
 
@@ -11,6 +13,7 @@ public class DocumentIndexer(
     IFileStorage fileStorage,
     IPdfTextExtractor textExtractor,
     ITextChunker textChunker,
+    IEmbeddingProvider embeddingProvider,
     IOptions<ChunkingOptions> chunkingOptions,
     ILogger<DocumentIndexer> logger) : IDocumentIndexer
 {
@@ -42,8 +45,10 @@ public class DocumentIndexer(
             }
 
             var draftChunks = textChunker.Chunk(pages, chunkingOptions.Value);
+            var embeddings = await embeddingProvider.EmbedBatchAsync(draftChunks.Select(d => d.Text).ToList(), ct);
+
             var now = DateTimeOffset.UtcNow;
-            var chunks = draftChunks.Select(d => new DocumentChunk
+            var chunks = draftChunks.Select((d, i) => new DocumentChunk
             {
                 Id = Guid.NewGuid(),
                 DocumentId = document.Id,
@@ -52,6 +57,8 @@ public class DocumentIndexer(
                 PageStart = d.PageStart,
                 PageEnd = d.PageEnd,
                 CreatedAt = now,
+                Embedding = new Vector(embeddings[i]),
+                EmbeddingModel = embeddingProvider.ModelId,
             }).ToList();
 
             await chunkRepository.ReplaceAllForDocumentAsync(document.Id, chunks, ct);
@@ -61,8 +68,9 @@ public class DocumentIndexer(
             document.IndexedAt = now;
             await documentRepository.SaveChangesAsync(ct);
 
-            logger.LogInformation("Indexed document {DocumentId}: {ChunkCount} chunks from {PageCount} pages",
-                document.Id, chunks.Count, pages.Count);
+            logger.LogInformation(
+                "Indexed document {DocumentId}: {ChunkCount} chunks from {PageCount} pages, embedded with {Model}",
+                document.Id, chunks.Count, pages.Count, embeddingProvider.ModelId);
         }
         catch (Exception ex)
         {

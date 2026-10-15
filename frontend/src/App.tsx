@@ -7,6 +7,7 @@ import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { SearchPage } from './pages/SearchPage'
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/documents" element={<DocumentLibraryPage />} />
+            <Route path="/search" element={<SearchPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

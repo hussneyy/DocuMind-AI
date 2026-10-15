@@ -40,6 +40,20 @@ rules testable without a database or AI provider, and keeps controllers free of 
   pick up the same document. Justified by the project's explicit scale guidance ("don't add a
   complicated distributed queue unless justified"); if this app ever needed multiple instances,
   the fix is a `SELECT ... FOR UPDATE SKIP LOCKED`-style atomic claim, not a new broker.
+- **Dimension-less pgvector column.** `DocumentChunks.Embedding` is mapped as `vector` (no `(n)`)
+  rather than, say, `vector(1536)`. pgvector allows this, and it means switching the configured
+  embedding model/provider — which can change the vector dimension — never requires an `ALTER
+  COLUMN` migration. The cost: Postgres will error if a single similarity query ever compares
+  vectors of two different dimensions, so the app's own responsibility is to keep every stored
+  embedding on the currently configured model — `DocumentIndexer` always re-embeds with the
+  current provider, and a document must be retried (not just left alone) after a model change for
+  its embeddings to be comparable again. No ANN index (ivfflat/hnsw) is created yet, since an
+  index needs either a fixed dimension or enough data to be worth the build cost — add one before
+  this project's document count ever gets large.
+- **Reciprocal Rank Fusion for hybrid search**, not a weighted score blend. A cosine similarity
+  (roughly 0-1) and a Postgres `ts_rank` score (unbounded, corpus-dependent) aren't on comparable
+  scales, so averaging them directly would be meaningless. RRF only uses each list's *rank
+  position*, which is always comparable regardless of the underlying scoring method.
 
 ## Milestone roadmap
 

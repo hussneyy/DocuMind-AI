@@ -1,7 +1,9 @@
 using DocuMind.Application.Auth;
 using DocuMind.Application.Documents;
+using DocuMind.Application.Embeddings;
 using DocuMind.Infrastructure.BackgroundJobs;
 using DocuMind.Infrastructure.Documents;
+using DocuMind.Infrastructure.Embeddings;
 using DocuMind.Infrastructure.Identity;
 using DocuMind.Infrastructure.Persistence;
 using DocuMind.Infrastructure.Storage;
@@ -9,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace DocuMind.Infrastructure;
 
@@ -42,6 +45,15 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddScoped<IPdfInspector, PdfPigInspector>();
         services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
+
+        services.AddHttpClient<OpenAiEmbeddingProvider>();
+        services.AddScoped<IEmbeddingProvider>(sp =>
+        {
+            var embeddingOptions = sp.GetRequiredService<IOptions<EmbeddingOptions>>().Value;
+            return embeddingOptions.Provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase)
+                ? sp.GetRequiredService<OpenAiEmbeddingProvider>()
+                : ActivatorUtilities.CreateInstance<MockEmbeddingProvider>(sp);
+        });
 
         services.AddHostedService<DocumentIndexingBackgroundService>();
 

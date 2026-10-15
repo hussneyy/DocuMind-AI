@@ -6,7 +6,8 @@ using DocuMind.Domain.Enums;
 
 namespace DocuMind.IntegrationTests;
 
-public class DocumentIndexingTests : IClassFixture<DocuMindApiFactory>
+[Collection(DocuMindApiCollection.Name)]
+public class DocumentIndexingTests
 {
     private readonly DocuMindApiFactory _factory;
 

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pgvector;
 
 #nullable disable
 
@@ -91,6 +92,13 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uuid");
+
+                    b.Property<Vector>("Embedding")
+                        .HasColumnType("vector");
+
+                    b.Property<string>("EmbeddingModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("PageEnd")
                         .HasColumnType("integer");

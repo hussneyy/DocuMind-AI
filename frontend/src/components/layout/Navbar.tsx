@@ -51,6 +51,9 @@ export function Navbar() {
               <Link to="/documents" className="text-sm font-medium text-slate-600 hover:text-slate-900">
                 My Documents
               </Link>
+              <Link to="/search" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+                Search
+              </Link>
               <span className="hidden text-sm text-slate-500 sm:inline">{user.displayName}</span>
               <Button variant="ghost" size="md" onClick={handleLogout}>
                 Log out

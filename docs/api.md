@@ -26,6 +26,7 @@ surface.
 | DELETE | `/api/documents/{id}` | cookie | Deletes the document and its stored file. 404 if not owned. |
 | POST | `/api/documents/{id}/retry` | cookie | Re-queues a `Failed` document for indexing. 400 if it isn't currently `Failed`. |
 | GET | `/api/documents/{id}/chunks` | cookie | The document's extracted chunks (`id`, `chunkIndex`, `textContent`, `pageStart`, `pageEnd`), ordered by index. 404 if not owned. |
+| POST | `/api/search` | cookie | Semantic/keyword/hybrid search over the caller's indexed chunks. Body: `query` (required), `mode` (`Semantic`\|`Keyword`\|`Hybrid`, default `Hybrid`), `documentIds` (optional scope), `topK` (optional, 1-50). |
 
 Every `/api/documents/*` request requires the `X-Requested-With` header (see
 [security.md](security.md)) in addition to the auth cookie.
@@ -89,7 +90,37 @@ implemented, rather than a silent empty "success".
 A chunk's `pageStart`/`pageEnd` differ when it spans a page boundary — citations should reference
 the full range, not just one page.
 
+### Example: search
+
+```http
+POST /api/search
+Cookie: documind.auth=...
+X-Requested-With: DocuMindClient
+Content-Type: application/json
+
+{ "query": "exam registration deadline", "mode": "Hybrid" }
+```
+
+```json
+[
+  {
+    "chunkId": "f52e1b51-7403-4051-b361-48f96c171c69",
+    "documentId": "b2cd48df-e8ff-4565-8bfa-5014cc558041",
+    "documentFileName": "handbook.pdf",
+    "excerpt": "...The exam registration deadline is March fifteenth...",
+    "pageStart": 1,
+    "pageEnd": 3,
+    "score": 0.0328
+  }
+]
+```
+
+An empty array means no sufficiently relevant passage was found (below `Search:MinSimilarity`
+for semantic mode, or no full-text match for keyword mode) — never a fabricated low-confidence
+result. `score` is only comparable within a single response for `Semantic` or `Keyword` mode;
+`Hybrid` mode's score is an RRF-combined rank value, not a similarity.
+
 ## Planned endpoints
 
-Summaries, search, chat, conversations, and feedback endpoints from the project spec will be
-added here as they are actually implemented — not before.
+Chat, summaries, conversations, and feedback endpoints from the project spec will be added here
+as they are actually implemented — not before.

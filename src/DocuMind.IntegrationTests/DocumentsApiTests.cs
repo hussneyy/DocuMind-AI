@@ -6,7 +6,8 @@ using DocuMind.Application.Documents;
 
 namespace DocuMind.IntegrationTests;
 
-public class DocumentsApiTests : IClassFixture<DocuMindApiFactory>
+[Collection(DocuMindApiCollection.Name)]
+public class DocumentsApiTests
 {
     private readonly DocuMindApiFactory _factory;
 

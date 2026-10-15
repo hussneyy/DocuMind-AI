@@ -3,10 +3,9 @@
 Intelligent document search and AI knowledge assistant. Upload PDFs, search them with natural
 language, and get grounded, citation-backed answers — never invented page numbers or quotes.
 
-> **Status: Milestone 3 of 8 — PDF extraction, chunking & background indexing.** This is an actively
-> developed portfolio project. See [Project status](#project-status) for exactly what is
-> implemented and verified today versus what is planned. Do not assume any feature exists beyond
-> what's listed there.
+> **Status: Milestone 4 of 8 — Embeddings & semantic search.** This is an actively developed
+> portfolio project. See [Project status](#project-status) for exactly what is implemented and
+> verified today versus what is planned. Do not assume any feature exists beyond what's listed there.
 
 ## Problem statement
 
@@ -189,12 +188,63 @@ together via dependency injection.
 - EF Core migration applied to the live Postgres container: `DocumentChunks` table, with a unique
   `(DocumentId, ChunkIndex)` index and cascade delete from `Documents`.
 
+### Implemented and verified (Milestone 4 — Embeddings & semantic search)
+
+- **Configurable embedding provider abstraction**: `Embedding:Provider` switches between `Mock`
+  (default — a deterministic hashed-bag-of-words vector, zero external calls, no API key) and
+  `OpenAI` (a real implementation with timeout, retry-with-backoff on 429/5xx, and usage logging
+  that never logs document text or the API key) — selected at DI registration time
+  ([MockEmbeddingProvider.cs](src/DocuMind.Infrastructure/Embeddings/MockEmbeddingProvider.cs),
+  [OpenAiEmbeddingProvider.cs](src/DocuMind.Infrastructure/Embeddings/OpenAiEmbeddingProvider.cs)).
+  The mock isn't just a stub: 6 unit tests confirm it's deterministic, dimension-correct, L2-normalized,
+  and — genuinely useful for testing retrieval — that two texts sharing vocabulary score more
+  similar than two that don't.
+- **Embeddings are generated and persisted per chunk** during background indexing, stored in a
+  pgvector `vector` column alongside the model identifier that produced them
+  ([DocumentIndexer.cs](src/DocuMind.Application/Documents/DocumentIndexer.cs)). The column is
+  deliberately dimension-less (not `vector(1536)`) so switching embedding models/providers never
+  needs a schema migration — the trade-off, documented in
+  [docs/architecture.md](docs/architecture.md), is that existing documents must be re-indexed
+  (via retry) after a provider change, since mixing dimensions in one similarity query would error.
+- **Real pgvector cosine-similarity search** and **real Postgres full-text keyword search**
+  (`ts_vector`/`plain_to_tsquery`/`ts_rank`), both scoped to the caller's own documents at the
+  database level and optionally further scoped to specific document IDs
+  ([DocumentChunkRepository.cs](src/DocuMind.Infrastructure/Persistence/DocumentChunkRepository.cs)).
+  Hybrid mode combines both via Reciprocal Rank Fusion (rank position, not raw score, since a
+  cosine similarity and a text-search rank aren't on comparable scales) — 5 unit tests cover the
+  fusion logic directly.
+- **A minimum-similarity threshold** means an unrelated query returns an empty result list rather
+  than a weak, misleading top match — verified by an integration test with a deliberately
+  nonsense query.
+- **`POST /api/search`**: query, mode (`Semantic`/`Keyword`/`Hybrid`), optional document-ID scope,
+  optional top-K — ownership-filtered like every other endpoint. Verified by 8 integration tests
+  against the real pipeline: semantic search finds a page via shared vocabulary with correct page
+  numbers, keyword search finds an exact phrase, hybrid combines both, document-scoping excludes
+  other documents, and — checked explicitly — search never returns another user's chunks.
+- **Search results frontend**: mode toggle, an optional document-scope picker, and results shown
+  with the matching page range and matched terms highlighted — driven end-to-end in real headless
+  Chrome against the real running stack (upload → index → search finds the right page → a nonsense
+  query correctly shows no results → scoping to one document works) — see
+  [docs/screenshots/search-results.png](docs/screenshots/search-results.png).
+- **A real, impactful test-isolation bug found and fixed**: parallel `IClassFixture`-per-class
+  WebApplicationFactory instances were each running their own background indexing worker against
+  the *same* shared `documind_test` database while each had a *different* local storage
+  directory — one worker could claim a document whose file lived in another instance's directory,
+  fail with `FileNotFoundException`, and report a misleading generic error. Worse, diagnosing it
+  surfaced a second, more serious issue: the test host's configuration overrides were silently
+  losing to `dotnet user-secrets` (auto-loaded because `WebApplicationFactory` defaults to the
+  `Development` environment), meaning integration tests had actually been running against the
+  **real local development database** the whole time, not the intended isolated `documind_test`.
+  Both are fixed — one shared factory via an xUnit collection fixture, and the test host now runs
+  under a `Testing` environment with overrides applied via environment variables — and documented
+  in full in [docs/security.md](docs/security.md). The real `documind` database was cleaned of the
+  contaminating test data this caused.
+
 ### Not yet implemented (planned, later milestones)
 
-Embeddings, semantic/keyword search, RAG chat, summaries, conversation persistence, the
-dashboard/chat/settings pages, OCR for scanned PDFs, and the full Docker Compose stack (API +
-frontend containers) all come in Milestones 4–8. Nothing above this line should be assumed to
-exist.
+RAG chat, summaries, conversation persistence, the dashboard/chat/settings pages, OCR for scanned
+PDFs, and the full Docker Compose stack (API + frontend containers) all come in Milestones 5–8.
+Nothing above this line should be assumed to exist.
 
 ## Prerequisites
 
@@ -266,23 +316,26 @@ provider, upload limits, storage directory). Copy it to `.env` for Docker Compos
 dotnet test
 ```
 
-`DocuMind.Tests` has 33 unit tests (file-validation rules, PDF signature checks, sentence-aware
-chunking, paged-result math, claims parsing) — no I/O, run in well under a second.
-`DocuMind.IntegrationTests` has 15 tests that spin up the real API in-process
-(`WebApplicationFactory`) against a dedicated `documind_test` database on the same local Postgres
-container, covering register/login/logout, the full document upload→list→get→delete lifecycle,
-cross-user isolation, CSRF rejection, invalid-PDF rejection, and the full background-indexing
-pipeline (real extraction, chunking, page references, OCR-needed detection, retry). The
-`documind_test` database must exist first — see [Troubleshooting](#troubleshooting) if
-`dotnet test` fails with a connection error.
+`DocuMind.Tests` has 44 unit tests (file-validation rules, PDF signature checks, sentence-aware
+chunking, mock-embedding determinism/similarity, RRF fusion logic, paged-result math, claims
+parsing) — no I/O, run in well under a second. `DocuMind.IntegrationTests` has 23 tests that spin
+up the real API in-process (`WebApplicationFactory`, one shared instance across all test classes —
+see [docs/security.md](docs/security.md) for why) against a dedicated `documind_test` database on
+the same local Postgres container, covering register/login/logout, the full document
+upload→list→get→delete lifecycle, cross-user isolation, CSRF rejection, invalid-PDF rejection,
+the full background-indexing pipeline, and semantic/keyword/hybrid search with relevance
+thresholds and document scoping. The `documind_test` database must exist first — see
+[Troubleshooting](#troubleshooting) if `dotnet test` fails with a connection error.
 
 ## Database and pgvector setup
 
 `docker compose up -d postgres` brings up PostgreSQL 16 with pgvector using the
 `pgvector/pgvector:pg16` image. `AppDbContext.OnModelCreating` registers the `vector` extension.
 EF Core migrations currently create the ASP.NET Core Identity tables, `Documents`, and
-`DocumentChunks`; the pgvector embedding column on `DocumentChunks` arrives in Milestone 4 once
-semantic search is implemented.
+`DocumentChunks` (with a dimension-less `vector` column and an `EmbeddingModel` identifier column —
+see [docs/architecture.md](docs/architecture.md) for why dimension-less). No ANN index
+(ivfflat/hnsw) yet — not justified at this project's data scale; a sequential scan over a handful
+of chunks is fine.
 
 ## Security and privacy considerations
 
@@ -306,18 +359,26 @@ semantic search is implemented.
 - Health check responses do not expose connection strings, stack traces, or other internal detail.
 - Prompt-injection mitigations for AI-generated answers arrive with the RAG milestone and will be
   documented in [docs/security.md](docs/security.md) at that point.
+- Embedding provider credentials (`Embedding:ApiKey`) follow the same rule as the database
+  connection string: never committed, read from configuration/environment only.
+- A real integration-test isolation bug (two background workers racing across a shared database;
+  test config silently losing to real `dotnet user-secrets`) caused tests to run against the real
+  local dev database for a time. Found, fixed, and the contaminating data cleaned up — full
+  write-up in [docs/security.md](docs/security.md).
 
 ## Known limitations
 
-This is Milestone 3 of 8. There are no embeddings, no search, and no AI integration yet —
-documents are fully extracted and chunked, but nothing is retrievable by meaning or keyword.
-Scanned/image-only PDFs are detected and explicitly fail (OCR is not implemented). The background
-indexing worker is a single in-process `BackgroundService` backed by the database as a queue —
-appropriate at this project's scale, but not safe to run as multiple API instances without adding
-a claim-locking scheme (see [docs/architecture.md](docs/architecture.md)). Logout relies on the
-client discarding the cookie it's told to discard (standard for stateless cookie auth); there is
-no server-side session revocation list. Treat this repository as a verified foundation with real
-auth, document management, and indexing, not a complete product yet.
+This is Milestone 4 of 8. There is no RAG chat, no summaries, and no conversation persistence
+yet — search finds and ranks relevant passages, but nothing generates an answer from them.
+Scanned/image-only PDFs are detected and explicitly fail (OCR is not implemented). The mock
+embedding provider has no real semantic understanding (it matches on shared vocabulary, not
+meaning) — genuine semantic matching requires configuring a real provider like OpenAI. The
+background indexing worker is a single in-process `BackgroundService` backed by the database as a
+queue — appropriate at this project's scale, but not safe to run as multiple API instances without
+adding a claim-locking scheme (see [docs/architecture.md](docs/architecture.md)). Logout relies on
+the client discarding the cookie it's told to discard (standard for stateless cookie auth); there
+is no server-side session revocation list. Treat this repository as a verified foundation with
+real auth, document management, indexing, and search, not a complete product yet.
 
 ## Roadmap
 
@@ -338,6 +399,11 @@ answering → summaries & source viewer → security hardening → deployment & 
   `frontend/vite.config.ts`'s proxy target matches.
 - **Docker commands fail with a pipe/engine error** — Docker Desktop isn't running; start it and
   wait for the engine to report ready (`docker info`) before retrying.
+- **Search always returns empty results** — confirm the document's status is actually `Indexed`
+  (not `Queued`/`Processing`) via `GET /api/documents/{id}` first; chunks (and their embeddings)
+  don't exist until indexing finishes. If it's genuinely indexed, check `Search:MinSimilarity` in
+  `appsettings.json` isn't set unreasonably high, and remember the default Mock embedding provider
+  only matches shared vocabulary, not meaning.
 
 ## License and attribution
 

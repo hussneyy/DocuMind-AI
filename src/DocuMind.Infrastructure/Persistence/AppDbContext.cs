@@ -41,6 +41,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             builder.ToTable("DocumentChunks");
             builder.HasKey(c => c.Id);
             builder.Property(c => c.TextContent).IsRequired();
+            builder.Property(c => c.EmbeddingModel).HasMaxLength(100);
+
+            // Deliberately no fixed dimension: different embedding providers/models use different
+            // vector sizes, and switching providers shouldn't require a column migration. The
+            // trade-off is that mixing dimensions within one similarity query would error at the
+            // database level — the app avoids that by always re-embedding with the currently
+            // configured model (see DocumentIndexer), so retry after a model change is required.
+            builder.Property(c => c.Embedding).HasColumnType("vector");
+
             builder.HasIndex(c => new { c.DocumentId, c.ChunkIndex }).IsUnique();
             builder.HasOne<Document>()
                 .WithMany()

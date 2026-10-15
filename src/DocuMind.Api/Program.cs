@@ -59,13 +59,18 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
+// Configurable so the integration test host (many rapid register/login calls across a shared
+// test collection) can raise the limit without weakening the real default.
+var authRateLimitPermits = builder.Configuration.GetValue("RateLimiting:Auth:PermitLimit", 10);
+var authRateLimitWindowSeconds = builder.Configuration.GetValue("RateLimiting:Auth:WindowSeconds", 60);
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddFixedWindowLimiter("auth", limiterOptions =>
     {
-        limiterOptions.PermitLimit = 10;
-        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.PermitLimit = authRateLimitPermits;
+        limiterOptions.Window = TimeSpan.FromSeconds(authRateLimitWindowSeconds);
         limiterOptions.QueueLimit = 0;
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
     });

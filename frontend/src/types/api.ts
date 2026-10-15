@@ -34,3 +34,21 @@ export interface PagedResult<T> {
   totalCount: number
   totalPages: number
 }
+
+export const SearchMode = {
+  Semantic: 'Semantic',
+  Keyword: 'Keyword',
+  Hybrid: 'Hybrid',
+} as const
+
+export type SearchMode = (typeof SearchMode)[keyof typeof SearchMode]
+
+export interface SearchResultItem {
+  chunkId: string
+  documentId: string
+  documentFileName: string
+  excerpt: string
+  pageStart: number
+  pageEnd: number
+  score: number
+}

@@ -4,7 +4,7 @@ This file tracks security measures as they are actually implemented and verified
 target state from the project spec. See the root [README.md](../README.md#security-and-privacy-considerations)
 for a summary.
 
-## Implemented (Milestones 1–2)
+## Implemented (Milestones 1–3)
 
 - **No committed secrets.** The database connection string in `appsettings.json` is a non-working
   placeholder. The real local connection string is stored via `dotnet user-secrets`. `.env.example`
@@ -54,6 +54,65 @@ for a summary.
   but it is only ever called from `DocumentIndexer`, never from a controller — there is no HTTP
   route that lets a request reach it with an arbitrary ID. The new `retry` and `chunks` endpoints
   use the normal owner-filtered lookup like every other document endpoint.
+
+## Implemented (Milestone 4)
+
+- **Embedding provider credentials never committed.** `Embedding:ApiKey` follows the same rule as
+  the database connection string — placeholder in `appsettings.json`, real value from environment
+  variables or user secrets only. The Mock provider (the default) needs no credential at all.
+- **Search stays within ownership boundaries.** `DocumentChunkRepository.SemanticSearchAsync`/
+  `KeywordSearchAsync` join through `Documents` and filter by `OwnerUserId` in the same query that
+  does the similarity/full-text matching — there's no code path where a chunk from another user's
+  document is even fetched from the database, let alone returned. Verified by
+  `Search_NeverReturnsAnotherUsersChunks` in `SearchApiTests.cs`.
+- **No fabricated results.** Below `Search:MinSimilarity`, semantic search returns nothing rather
+  than a low-confidence top match — verified by `Search_ForATotallyUnrelatedQuery_ReturnsNoResultsRatherThanAWeakMatch`.
+  This is the same "say so instead of guessing" principle the project's grounding rules require
+  for the RAG milestone, applied one step earlier at the retrieval stage.
+
+## A real test-isolation bug: two defects, found while fixing a flaky test
+
+While adding search, `DocumentWithNoExtractableText_FailsWithAnExplicitOcrMessage_NotSilentSuccess`
+started intermittently failing with a generic error instead of the expected OCR message. Chasing
+it down surfaced two real, separate bugs — not test flakiness to paper over:
+
+1. **Cross-instance race.** Each integration test class used `IClassFixture<DocuMindApiFactory>`,
+   so xUnit created a *separate* factory — separate host, separate `DocumentIndexingBackgroundService`,
+   separate local storage directory — per test class, but all of them pointed at the *same* shared
+   `documind_test` database. Two workers could both see the same `Queued` document and race to
+   claim it; whichever worker's `LocalFileStorage` *didn't* actually hold that document's file
+   would throw `FileNotFoundException`, caught by the generic handler. **Fix:** one shared
+   `DocuMindApiFactory` across every test class via an xUnit `[CollectionDefinition]`/
+   `ICollectionFixture` ([DocuMindApiCollection.cs](../src/DocuMind.IntegrationTests/DocuMindApiCollection.cs)) —
+   one host, one worker, one storage directory, and (as a bonus) test classes in that collection
+   now run sequentially relative to each other, which is what let the *next* bug surface clearly.
+
+2. **Test configuration silently losing to real user secrets.** The sequential test run started
+   hitting real `429 Too Many Requests` after a handful of register calls — expected, since the
+   auth rate limiter is deliberately strict, but the test factory was supposed to raise that limit
+   for its own run. Diagnosing it showed every configuration override the test factory set via
+   `IWebHostBuilder.ConfigureAppConfiguration` was being silently outranked by `dotnet user-secrets`,
+   because `WebApplicationFactory` defaults to the `Development` environment, and ASP.NET Core's
+   `WebApplication.CreateBuilder` auto-loads user secrets whenever `IsDevelopment()` is true — with
+   higher precedence than the test's own override. **The real consequence:** every integration
+   test had actually been connecting to the **real local development database** (`documind`, via
+   the developer's own `ConnectionStrings:Postgres` user secret) instead of the intended, isolated
+   `documind_test` — for the entire duration of Milestones 2 and 3. 180 test-created user accounts
+   (and their documents) had accumulated in the real dev database by the time this was caught.
+   **Fix:** the test factory now calls `builder.UseEnvironment("Testing")`, which stops user
+   secrets from auto-loading, and applies its overrides via process environment variables (read
+   unconditionally and early by `CreateBuilder`, unlike the `ConfigureAppConfiguration` callback,
+   which — empirically, via direct diagnostic logging — never actually took effect for this
+   minimal-hosting `Program.cs` regardless of environment) — see
+   [DocuMindApiFactory.cs](../src/DocuMind.IntegrationTests/DocuMindApiFactory.cs). The
+   contaminating accounts were deleted from the real `documind` database after confirming every
+   one matched a known test-data naming pattern.
+
+**Why this is worth documenting rather than quietly fixing:** it's a reminder that a test suite
+reporting green doesn't prove test *isolation* — these tests were passing throughout Milestones 2
+and 3 while quietly pointed at the wrong database. The fix is now itself verified: a diagnostic
+log line (since removed) confirmed the connection string read inside `Program.cs` matched
+`documind_test` only after both changes landed together.
 
 ## Verified supply-chain check
 
