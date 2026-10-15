@@ -3,9 +3,10 @@
 Intelligent document search and AI knowledge assistant. Upload PDFs, search them with natural
 language, and get grounded, citation-backed answers — never invented page numbers or quotes.
 
-> **Status: Milestone 2 of 8 — Authentication & document library.** This is an actively developed
-> portfolio project. See [Project status](#project-status) for exactly what is implemented and
-> verified today versus what is planned. Do not assume any feature exists beyond what's listed there.
+> **Status: Milestone 3 of 8 — PDF extraction, chunking & background indexing.** This is an actively
+> developed portfolio project. See [Project status](#project-status) for exactly what is
+> implemented and verified today versus what is planned. Do not assume any feature exists beyond
+> what's listed there.
 
 ## Problem statement
 
@@ -150,12 +151,50 @@ together via dependency injection.
   real package, plain `PdfPig` (owners EliotJones/BobLd, Apache-2.0, backing the genuine
   `UglyToad/PdfPig` GitHub repo), instead.
 
+### Implemented and verified (Milestone 3 — PDF extraction, chunking & background indexing)
+
+- **Real page-by-page text extraction** via PdfPig, run by the background pipeline rather than at
+  upload time (upload only validates the file; extraction is deferred so uploads stay fast)
+  ([PdfPigTextExtractor.cs](src/DocuMind.Infrastructure/Documents/PdfPigTextExtractor.cs)).
+- **Sentence-aware chunking** with configurable size/overlap: chunks never split a sentence
+  mid-way (a single sentence longer than the chunk size is hard-split by length so nothing grows
+  unbounded), trailing sentences carry into the next chunk as configurable overlap, and a chunk's
+  page range is the min/max page of the sentences it actually contains — so a chunk spanning a
+  page boundary still cites correctly
+  ([TextChunker.cs](src/DocuMind.Application/Documents/TextChunker.cs)). Verified by 11 unit
+  tests covering exactly these properties (never mid-sentence, correct page spans, overlap
+  carried, zero-overlap means zero, blank pages skipped, oversized sentences hard-split).
+- **Database-backed background worker** (`BackgroundService`, bounded concurrency, configurable
+  poll interval): claims `Queued` documents, flips them to `Processing` (visible to the user
+  immediately, not just at the end), extracts, chunks, persists, and marks `Indexed` or `Failed`
+  ([DocumentIndexingBackgroundService.cs](src/DocuMind.Infrastructure/BackgroundJobs/DocumentIndexingBackgroundService.cs)).
+- **Scanned/image-only PDFs are never silently "indexed" with nothing in them** — zero extractable
+  text across every page is detected and the document is marked `Failed` with an explicit message
+  that OCR isn't implemented yet, rather than reporting success with zero chunks.
+- **Retry**: `POST /api/documents/{id}/retry` re-queues a `Failed` document (400 if it isn't
+  currently failed); `GET /api/documents/{id}/chunks` returns the persisted chunks with page
+  ranges, ownership-filtered like every other document endpoint.
+- Verified end to end against the real pipeline (not mocked) with 5 new integration tests: a real
+  3-page PDF is uploaded, polled through `Queued`→`Processing`→`Indexed`, and its chunks' page
+  numbers are asserted against the actual source pages; a blank PDF is confirmed to fail with the
+  OCR message and is proven to actually get reprocessed (not a no-op) on retry; chunks are proven
+  invisible to a second user
+  ([DocumentIndexingTests.cs](src/DocuMind.IntegrationTests/DocumentIndexingTests.cs)).
+- **Frontend**: the document library now polls while anything is `Queued`/`Processing` so status
+  updates appear without a manual refresh, and shows a **Retry** action on failed rows. Driven
+  live in headless Chrome against the real running stack — a real multi-page PDF goes from
+  `Queued` to `Indexed` with the correct page count, and a blank PDF fails with the OCR message,
+  gets retried, and visibly fails again (proving retry really reprocesses it) — see
+  [docs/screenshots/document-processing-states.png](docs/screenshots/document-processing-states.png).
+- EF Core migration applied to the live Postgres container: `DocumentChunks` table, with a unique
+  `(DocumentId, ChunkIndex)` index and cascade delete from `Documents`.
+
 ### Not yet implemented (planned, later milestones)
 
-Text extraction/chunking, embeddings, semantic/keyword search, RAG chat, summaries, conversation
-persistence, the dashboard/chat/settings pages, retry-failed-processing, and the full Docker
-Compose stack (API + frontend containers) all come in Milestones 3–8. Nothing above this line
-should be assumed to exist.
+Embeddings, semantic/keyword search, RAG chat, summaries, conversation persistence, the
+dashboard/chat/settings pages, OCR for scanned PDFs, and the full Docker Compose stack (API +
+frontend containers) all come in Milestones 4–8. Nothing above this line should be assumed to
+exist.
 
 ## Prerequisites
 
@@ -227,20 +266,23 @@ provider, upload limits, storage directory). Copy it to `.env` for Docker Compos
 dotnet test
 ```
 
-`DocuMind.Tests` has 22 unit tests (file-validation rules, PDF signature checks, paged-result math,
-claims parsing) — no I/O, run in well under a second. `DocuMind.IntegrationTests` has 10 tests that
-spin up the real API in-process (`WebApplicationFactory`) against a dedicated `documind_test`
-database on the same local Postgres container, covering register/login/logout, the full document
-upload→list→get→delete lifecycle, cross-user isolation, CSRF rejection, and invalid-PDF rejection.
-The `documind_test` database must exist first — see
-[Troubleshooting](#troubleshooting) if `dotnet test` fails with a connection error.
+`DocuMind.Tests` has 33 unit tests (file-validation rules, PDF signature checks, sentence-aware
+chunking, paged-result math, claims parsing) — no I/O, run in well under a second.
+`DocuMind.IntegrationTests` has 15 tests that spin up the real API in-process
+(`WebApplicationFactory`) against a dedicated `documind_test` database on the same local Postgres
+container, covering register/login/logout, the full document upload→list→get→delete lifecycle,
+cross-user isolation, CSRF rejection, invalid-PDF rejection, and the full background-indexing
+pipeline (real extraction, chunking, page references, OCR-needed detection, retry). The
+`documind_test` database must exist first — see [Troubleshooting](#troubleshooting) if
+`dotnet test` fails with a connection error.
 
 ## Database and pgvector setup
 
 `docker compose up -d postgres` brings up PostgreSQL 16 with pgvector using the
 `pgvector/pgvector:pg16` image. `AppDbContext.OnModelCreating` registers the `vector` extension.
-EF Core migrations currently create the ASP.NET Core Identity tables and `Documents`; `DocumentChunk`
-and its pgvector column arrive in Milestone 4 once semantic search is implemented.
+EF Core migrations currently create the ASP.NET Core Identity tables, `Documents`, and
+`DocumentChunks`; the pgvector embedding column on `DocumentChunks` arrives in Milestone 4 once
+semantic search is implemented.
 
 ## Security and privacy considerations
 
@@ -252,10 +294,12 @@ and its pgvector column arrive in Milestone 4 once semantic search is implemente
 - A custom `X-Requested-With` header is required on every state-changing request as CSRF defense
   for cookie-based auth (see [docs/security.md](docs/security.md) for the reasoning and trade-offs).
 - Login is rate-limited (10/minute) and accounts lock out for 5 minutes after 5 failed attempts.
-- Every document query (`list`, `get`, `delete`) filters by the authenticated user's ID in the
-  database query itself — not an after-the-fact check — and is covered by an integration test that
-  asserts a second user gets a 404, not a 403, for another user's document (so the API never
-  confirms *that* a given ID exists for someone else).
+- Every document query (`list`, `get`, `delete`, `retry`, `chunks`) filters by the authenticated
+  user's ID in the database query itself — not an after-the-fact check — and is covered by an
+  integration test that asserts a second user gets a 404, not a 403, for another user's document
+  (so the API never confirms *that* a given ID exists for someone else). The one owner-unfiltered
+  lookup (`GetByIdForProcessingAsync`) is only ever called by the internal background worker,
+  never from a controller — there is no HTTP path that reaches it with a user-supplied ID.
 - Uploads are validated by PDF file signature and an actual PdfPig parse, not the browser-supplied
   `Content-Type`; stored files use a server-generated name, never the original filename.
 - CORS is restricted to an explicit allow-list of origins (configured in `appsettings.json`).
@@ -265,11 +309,15 @@ and its pgvector column arrive in Milestone 4 once semantic search is implemente
 
 ## Known limitations
 
-This is Milestone 2 of 8. There is no text extraction, no embeddings, no search, and no AI
-integration yet — documents are stored and validated but not indexed. Logout relies on the client
-discarding the cookie it's told to discard (standard for stateless cookie auth); there is no
-server-side session revocation list. Treat this repository as a verified foundation with real
-auth and document management, not a complete product yet.
+This is Milestone 3 of 8. There are no embeddings, no search, and no AI integration yet —
+documents are fully extracted and chunked, but nothing is retrievable by meaning or keyword.
+Scanned/image-only PDFs are detected and explicitly fail (OCR is not implemented). The background
+indexing worker is a single in-process `BackgroundService` backed by the database as a queue —
+appropriate at this project's scale, but not safe to run as multiple API instances without adding
+a claim-locking scheme (see [docs/architecture.md](docs/architecture.md)). Logout relies on the
+client discarding the cookie it's told to discard (standard for stateless cookie auth); there is
+no server-side session revocation list. Treat this repository as a verified foundation with real
+auth, document management, and indexing, not a complete product yet.
 
 ## Roadmap
 

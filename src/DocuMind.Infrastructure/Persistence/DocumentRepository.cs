@@ -1,5 +1,6 @@
 using DocuMind.Application.Documents;
 using DocuMind.Domain.Entities;
+using DocuMind.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace DocuMind.Infrastructure.Persistence;
@@ -15,6 +16,20 @@ public class DocumentRepository(AppDbContext dbContext) : IDocumentRepository
     {
         return await dbContext.Documents
             .FirstOrDefaultAsync(d => d.Id == documentId && d.OwnerUserId == ownerUserId, ct);
+    }
+
+    public async Task<Document?> GetByIdForProcessingAsync(Guid documentId, CancellationToken ct)
+    {
+        return await dbContext.Documents.FirstOrDefaultAsync(d => d.Id == documentId, ct);
+    }
+
+    public async Task<IReadOnlyList<Document>> GetQueuedForProcessingAsync(int batchSize, CancellationToken ct)
+    {
+        return await dbContext.Documents
+            .Where(d => d.ProcessingStatus == DocumentProcessingStatus.Queued)
+            .OrderBy(d => d.UploadedAt)
+            .Take(batchSize)
+            .ToListAsync(ct);
     }
 
     public async Task<(IReadOnlyList<Document> Items, int TotalCount)> ListAsync(

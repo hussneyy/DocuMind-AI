@@ -1,5 +1,6 @@
 using DocuMind.Application.Auth;
 using DocuMind.Application.Documents;
+using DocuMind.Infrastructure.BackgroundJobs;
 using DocuMind.Infrastructure.Documents;
 using DocuMind.Infrastructure.Identity;
 using DocuMind.Infrastructure.Persistence;
@@ -37,8 +38,12 @@ public static class DependencyInjection
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddScoped<IPdfInspector, PdfPigInspector>();
+        services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
+
+        services.AddHostedService<DocumentIndexingBackgroundService>();
 
         return services;
     }

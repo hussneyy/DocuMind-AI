@@ -67,4 +67,18 @@ public class DocumentsController(IDocumentService documentService) : ControllerB
         await documentService.DeleteAsync(User.GetUserId(), id, ct);
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/retry")]
+    public async Task<IActionResult> Retry(Guid id, CancellationToken ct)
+    {
+        var dto = await documentService.RetryAsync(User.GetUserId(), id, ct);
+        return Ok(dto);
+    }
+
+    [HttpGet("{id:guid}/chunks")]
+    public async Task<IActionResult> GetChunks(Guid id, CancellationToken ct)
+    {
+        var chunks = await documentService.ListChunksAsync(User.GetUserId(), id, ct);
+        return Ok(chunks);
+    }
 }

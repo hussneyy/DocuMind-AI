@@ -77,6 +77,39 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                     b.ToTable("Documents", (string)null);
                 });
 
+            modelBuilder.Entity("DocuMind.Domain.Entities.DocumentChunk", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ChunkIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PageEnd")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PageStart")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TextContent")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId", "ChunkIndex")
+                        .IsUnique();
+
+                    b.ToTable("DocumentChunks", (string)null);
+                });
+
             modelBuilder.Entity("DocuMind.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -284,6 +317,15 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                     b.HasOne("DocuMind.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DocuMind.Domain.Entities.DocumentChunk", b =>
+                {
+                    b.HasOne("DocuMind.Domain.Entities.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -13,6 +13,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     }
 
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +33,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             builder.HasOne<ApplicationUser>()
                 .WithMany()
                 .HasForeignKey(d => d.OwnerUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DocumentChunk>(builder =>
+        {
+            builder.ToTable("DocumentChunks");
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.TextContent).IsRequired();
+            builder.HasIndex(c => new { c.DocumentId, c.ChunkIndex }).IsUnique();
+            builder.HasOne<Document>()
+                .WithMany()
+                .HasForeignKey(c => c.DocumentId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

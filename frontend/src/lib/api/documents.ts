@@ -28,6 +28,11 @@ export async function deleteDocument(id: string): Promise<void> {
   await apiClient.delete(`/documents/${id}`)
 }
 
+export async function retryDocument(id: string): Promise<DocumentDto> {
+  const { data } = await apiClient.post<DocumentDto>(`/documents/${id}/retry`)
+  return data
+}
+
 export async function getDocument(id: string): Promise<DocumentDto> {
   const { data } = await apiClient.get<DocumentDto>(`/documents/${id}`)
   return data

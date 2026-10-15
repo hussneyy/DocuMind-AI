@@ -49,6 +49,11 @@ for a summary.
   unexpected returns a generic 500 with no stack trace, and is logged server-side only
   (`AppExceptionHandler.cs`).
 - **Restricted CORS**: only the origins listed in `Cors:AllowedOrigins`.
+- **Background indexing has no new attack surface.** `IDocumentRepository.GetByIdForProcessingAsync`
+  bypasses the owner filter (the background worker doesn't act on behalf of any particular user),
+  but it is only ever called from `DocumentIndexer`, never from a controller — there is no HTTP
+  route that lets a request reach it with an arbitrary ID. The new `retry` and `chunks` endpoints
+  use the normal owner-filtered lookup like every other document endpoint.
 
 ## Verified supply-chain check
 

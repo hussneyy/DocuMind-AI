@@ -12,9 +12,10 @@ import { DocumentProcessingStatus, type DocumentDto, type PagedResult } from '..
 
 const PAGE_SIZE = 10
 
+// "Uploaded" isn't included: documents move straight to Queued once the upload completes, so
+// that status is never actually observed and would be a dead filter option.
 const STATUS_FILTER_OPTIONS: { label: string; value: DocumentProcessingStatus | '' }[] = [
   { label: 'All statuses', value: '' },
-  { label: 'Uploaded', value: DocumentProcessingStatus.Uploaded },
   { label: 'Queued', value: DocumentProcessingStatus.Queued },
   { label: 'Processing', value: DocumentProcessingStatus.Processing },
   { label: 'Indexed', value: DocumentProcessingStatus.Indexed },
@@ -37,6 +38,8 @@ export function DocumentLibraryPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<DocumentDto | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const [retryingId, setRetryingId] = useState<string | null>(null)
 
   const fetchDocuments = useCallback(async () => {
     setIsLoading(true)
@@ -62,6 +65,20 @@ export function DocumentLibraryPage() {
     fetchDocuments()
   }, [fetchDocuments])
 
+  // While any document on this page is still being indexed, keep polling so status updates
+  // (Queued -> Processing -> Indexed/Failed) show up without the user refreshing manually.
+  useEffect(() => {
+    const hasInFlightDocument = (result?.items ?? []).some(
+      (doc) =>
+        doc.processingStatus === DocumentProcessingStatus.Queued ||
+        doc.processingStatus === DocumentProcessingStatus.Processing,
+    )
+    if (!hasInFlightDocument) return
+
+    const timeoutId = setTimeout(fetchDocuments, 2000)
+    return () => clearTimeout(timeoutId)
+  }, [result, fetchDocuments])
+
   async function handleFileSelected(file: File) {
     setUploadErrors([])
     setIsUploading(true)
@@ -73,6 +90,18 @@ export function DocumentLibraryPage() {
       setUploadErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : ['Upload failed.'])
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  async function handleRetry(doc: DocumentDto) {
+    setRetryingId(doc.id)
+    try {
+      await documentsApi.retryDocument(doc.id)
+      await fetchDocuments()
+    } catch (error) {
+      setLoadError(axios.isAxiosError(error) ? extractErrorMessages(error)[0] : 'Failed to retry document.')
+    } finally {
+      setRetryingId(null)
     }
   }
 
@@ -221,9 +250,21 @@ export function DocumentLibraryPage() {
                     <td className="px-4 py-3 text-slate-600">{formatFileSize(doc.fileSizeBytes)}</td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(doc.uploadedAt)}</td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="md" onClick={() => setDeleteTarget(doc)}>
-                        Delete
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        {doc.processingStatus === DocumentProcessingStatus.Failed && (
+                          <Button
+                            variant="ghost"
+                            size="md"
+                            disabled={retryingId === doc.id}
+                            onClick={() => handleRetry(doc)}
+                          >
+                            {retryingId === doc.id ? 'Retrying...' : 'Retry'}
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="md" onClick={() => setDeleteTarget(doc)}>
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

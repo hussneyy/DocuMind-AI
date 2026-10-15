@@ -10,6 +10,7 @@ namespace DocuMind.Application.Documents;
 
 public class DocumentService(
     IDocumentRepository repository,
+    IDocumentChunkRepository chunkRepository,
     IFileStorage fileStorage,
     IPdfInspector pdfInspector,
     IOptions<UploadOptions> options,
@@ -85,14 +86,14 @@ public class DocumentService(
             FileSizeBytes = buffer.Length,
             FileHash = Convert.ToHexString(hashBytes),
             PageCount = inspection.PageCount,
-            ProcessingStatus = DocumentProcessingStatus.Uploaded,
+            ProcessingStatus = DocumentProcessingStatus.Queued,
             UploadedAt = DateTimeOffset.UtcNow,
         };
 
         await repository.AddAsync(document, ct);
         await repository.SaveChangesAsync(ct);
 
-        logger.LogInformation("Document {DocumentId} uploaded by user {UserId} ({PageCount} pages)",
+        logger.LogInformation("Document {DocumentId} uploaded by user {UserId} ({PageCount} pages), queued for indexing",
             document.Id, ownerUserId, document.PageCount);
 
         return ToDto(document);
@@ -125,6 +126,37 @@ public class DocumentService(
         await fileStorage.DeleteAsync(document.StorageKey, ct);
         repository.Remove(document);
         await repository.SaveChangesAsync(ct);
+    }
+
+    public async Task<DocumentDto> RetryAsync(Guid ownerUserId, Guid documentId, CancellationToken ct)
+    {
+        var document = await repository.GetByIdAsync(ownerUserId, documentId, ct)
+            ?? throw new NotFoundException("Document not found.");
+
+        if (document.ProcessingStatus != DocumentProcessingStatus.Failed)
+        {
+            throw new AppValidationException(["Only documents in the Failed state can be retried."]);
+        }
+
+        document.ProcessingStatus = DocumentProcessingStatus.Queued;
+        document.ProcessingError = null;
+        await repository.SaveChangesAsync(ct);
+
+        logger.LogInformation("Document {DocumentId} re-queued for indexing by user {UserId}", document.Id, ownerUserId);
+
+        return ToDto(document);
+    }
+
+    public async Task<IReadOnlyList<DocumentChunkDto>> ListChunksAsync(Guid ownerUserId, Guid documentId, CancellationToken ct)
+    {
+        _ = await repository.GetByIdAsync(ownerUserId, documentId, ct)
+            ?? throw new NotFoundException("Document not found.");
+
+        var chunks = await chunkRepository.GetByDocumentIdAsync(documentId, ct);
+        return chunks
+            .OrderBy(c => c.ChunkIndex)
+            .Select(c => new DocumentChunkDto(c.Id, c.ChunkIndex, c.TextContent, c.PageStart, c.PageEnd))
+            .ToList();
     }
 
     private static DocumentDto ToDto(Document document) => new(

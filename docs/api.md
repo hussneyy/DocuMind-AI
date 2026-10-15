@@ -24,6 +24,8 @@ surface.
 | GET | `/api/documents/{id}` | cookie | Full document metadata. 404 if missing or not owned by the caller. |
 | GET | `/api/documents/{id}/status` | cookie | Just the processing status/error. |
 | DELETE | `/api/documents/{id}` | cookie | Deletes the document and its stored file. 404 if not owned. |
+| POST | `/api/documents/{id}/retry` | cookie | Re-queues a `Failed` document for indexing. 400 if it isn't currently `Failed`. |
+| GET | `/api/documents/{id}/chunks` | cookie | The document's extracted chunks (`id`, `chunkIndex`, `textContent`, `pageStart`, `pageEnd`), ordered by index. 404 if not owned. |
 
 Every `/api/documents/*` request requires the `X-Requested-With` header (see
 [security.md](security.md)) in addition to the auth cookie.
@@ -68,8 +70,24 @@ Response (`201 Created`):
 }
 ```
 
-`processingStatus` is an integer: `0 Uploaded, 1 Queued, 2 Processing, 3 Indexed, 4 Failed`.
-Indexing (anything beyond `Uploaded`) doesn't exist yet — that's Milestone 3.
+`processingStatus` is an integer: `0 Uploaded, 1 Queued, 2 Processing, 3 Indexed, 4 Failed`. In
+practice a document is set to `Queued` immediately on upload — `Uploaded` is never actually
+observed — and a background worker moves it through `Processing` to `Indexed` or `Failed` within
+a few seconds (poll interval is configurable, default 2s). A PDF with no extractable text (e.g.
+scanned/image-only) ends in `Failed` with an explicit `processingError` saying OCR isn't
+implemented, rather than a silent empty "success".
+
+### Example: chunks response
+
+```json
+[
+  { "id": "...", "chunkIndex": 0, "textContent": "The exam registration deadline is March 15th.", "pageStart": 2, "pageEnd": 2 },
+  { "id": "...", "chunkIndex": 1, "textContent": "...", "pageStart": 2, "pageEnd": 3 }
+]
+```
+
+A chunk's `pageStart`/`pageEnd` differ when it spans a page boundary — citations should reference
+the full range, not just one page.
 
 ## Planned endpoints
 

@@ -33,6 +33,13 @@ rules testable without a database or AI provider, and keeps controllers free of 
   failures in later milestones, without logging document contents or secrets.
 - **Mock AI/embedding provider mode**: lets the app run, and lets automated tests run, without a
   paid API key — required explicitly by the project spec.
+- **Database-backed background queue over a message broker**: `DocumentIndexingBackgroundService`
+  polls for `Queued` documents and indexes them with bounded concurrency, using PostgreSQL itself
+  as the queue (no RabbitMQ/Azure Service Bus/etc.). This is a single-instance design — there is
+  no cross-instance claim locking, so running more than one API instance would let two instances
+  pick up the same document. Justified by the project's explicit scale guidance ("don't add a
+  complicated distributed queue unless justified"); if this app ever needed multiple instances,
+  the fix is a `SELECT ... FOR UPDATE SKIP LOCKED`-style atomic claim, not a new broker.
 
 ## Milestone roadmap
 
