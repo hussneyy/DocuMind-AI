@@ -54,10 +54,33 @@ rules testable without a database or AI provider, and keeps controllers free of 
   (roughly 0-1) and a Postgres `ts_rank` score (unbounded, corpus-dependent) aren't on comparable
   scales, so averaging them directly would be meaningless. RRF only uses each list's *rank
   position*, which is always comparable regardless of the underlying scoring method.
+- **The RAG pipeline retrieves through `ISearchService.RetrieveAsync`, not a second retrieval
+  implementation.** Early on it would have been easy to write a RAG-specific semantic+keyword+RRF
+  query against `IDocumentChunkRepository` directly, since the LLM needs full chunk text rather
+  than `SearchResultItem`'s UI-sized excerpt. Instead, `SearchService.SearchAsync` was refactored
+  to call a new `RetrieveAsync` internally, and RAG calls the same method — so `/api/search` and
+  the chat pipeline can never silently drift onto different ranking logic, thresholds, or
+  ownership filters.
+- **An LLM provider abstraction (`ILlmProvider`) mirroring `IEmbeddingProvider`**: `Mock` (default,
+  deterministic, no API key) or `OpenAI` (real chat-completions call), selected the same way at DI
+  registration time. The mock isn't a fixed string — it picks the most question-relevant sentence
+  out of each retrieved passage and cites it, which is enough to exercise the full grounded-answer-
+  with-citations pipeline without a paid key.
+- **Citation markers are resolved by the generator, never trusted from the model.** The LLM is
+  asked to cite with `[n]` markers against a *numbered list of context blocks the generator itself
+  just built*; after the model responds, `RagAnswerGenerator` parses `[n]` markers out of the
+  answer text and only keeps the ones that match a block number it actually provided. A
+  hallucinated or out-of-range marker is dropped, not resolved to the nearest real chunk. This
+  means a citation that reaches the frontend is always backed by a chunk this request actually
+  retrieved for this user — the model controls the *wording*, never which sources get cited.
+- **The LLM is never called when retrieval found nothing relevant.** Below `Search:MinSimilarity`,
+  `RagAnswerGenerator` returns a fixed "not enough information" answer without a model call at
+  all — the same grounding principle already applied at the search layer (Milestone 4), now
+  applied one step earlier, before generation rather than after.
 
 ## Milestone roadmap
 
-1. **Foundation** (this milestone) — solution structure, DB connection, health checks, Swagger,
+1. **Foundation** — solution structure, DB connection, health checks, Swagger,
    React scaffold, landing page, Docker Compose for Postgres, Git.
 2. **Authentication & document library** — registration/login, document upload, validation,
    listing, deletion.

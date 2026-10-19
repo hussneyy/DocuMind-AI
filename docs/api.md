@@ -27,8 +27,12 @@ surface.
 | POST | `/api/documents/{id}/retry` | cookie | Re-queues a `Failed` document for indexing. 400 if it isn't currently `Failed`. |
 | GET | `/api/documents/{id}/chunks` | cookie | The document's extracted chunks (`id`, `chunkIndex`, `textContent`, `pageStart`, `pageEnd`), ordered by index. 404 if not owned. |
 | POST | `/api/search` | cookie | Semantic/keyword/hybrid search over the caller's indexed chunks. Body: `query` (required), `mode` (`Semantic`\|`Keyword`\|`Hybrid`, default `Hybrid`), `documentIds` (optional scope), `topK` (optional, 1-50). |
+| POST | `/api/chat/ask` | cookie | Ask a grounded question. Body: `question` (required, 1-2000 chars), `conversationId` (optional — omit to start a new conversation), `documentIds` (optional scope). Returns the new user + assistant messages, the latter with resolved citations. |
+| GET | `/api/chat/conversations` | cookie | The caller's own conversations, newest first. |
+| GET | `/api/chat/conversations/{id}` | cookie | Full message history for one conversation, each assistant message with its citations. 404 if missing or not owned by the caller. |
+| DELETE | `/api/chat/conversations/{id}` | cookie | Deletes a conversation and all its messages/citations. 404 if not owned. |
 
-Every `/api/documents/*` request requires the `X-Requested-With` header (see
+Every `/api/documents/*` and `/api/chat/*` request requires the `X-Requested-With` header (see
 [security.md](security.md)) in addition to the auth cookie.
 
 ### Example: register then upload
@@ -120,7 +124,48 @@ for semantic mode, or no full-text match for keyword mode) — never a fabricate
 result. `score` is only comparable within a single response for `Semantic` or `Keyword` mode;
 `Hybrid` mode's score is an RRF-combined rank value, not a similarity.
 
+### Example: ask a grounded question
+
+```http
+POST /api/chat/ask
+Cookie: documind.auth=...
+X-Requested-With: DocuMindClient
+Content-Type: application/json
+
+{ "question": "When is the exam registration deadline?" }
+```
+
+```json
+{
+  "conversationId": "9f5a1e3a-6b8e-4b63-9a2a-9c6a9a2f6e11",
+  "title": "When is the exam registration deadline?",
+  "userMessage": {
+    "id": "...", "role": "user", "content": "When is the exam registration deadline?",
+    "createdAt": "2026-10-16T12:00:00Z", "citations": []
+  },
+  "assistantMessage": {
+    "id": "...", "role": "assistant",
+    "content": "Based on your documents: The exam registration deadline is March fifteenth this year [1].",
+    "createdAt": "2026-10-16T12:00:00.001Z",
+    "citations": [
+      {
+        "chunkId": "...", "documentId": "...", "documentFileName": "handbook.pdf",
+        "pageStart": 2, "pageEnd": 2, "excerpt": "The exam registration deadline is March fifteenth this year."
+      }
+    ]
+  }
+}
+```
+
+Pass the returned `conversationId` back on the next call to continue the same conversation — prior
+messages are replayed to the model so follow-up questions ("and if I miss it?") resolve correctly.
+If nothing relevant was found in the caller's documents, `assistantMessage.content` explicitly
+says so and `citations` is empty — the language model is never even called in that case, so it
+cannot fabricate an answer. Every `[n]` marker in `content` corresponds to one entry in
+`citations`, in order; a marker the model might emit for a passage that was never actually
+retrieved is dropped before the response is built, never resolved to the wrong source.
+
 ## Planned endpoints
 
-Chat, summaries, conversations, and feedback endpoints from the project spec will be added here
-as they are actually implemented — not before.
+Summaries and a page-level source viewer from the project spec will be added here as they are
+actually implemented — not before.

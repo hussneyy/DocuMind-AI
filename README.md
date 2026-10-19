@@ -3,7 +3,7 @@
 Intelligent document search and AI knowledge assistant. Upload PDFs, search them with natural
 language, and get grounded, citation-backed answers — never invented page numbers or quotes.
 
-> **Status: Milestone 4 of 8 — Embeddings & semantic search.** This is an actively developed
+> **Status: Milestone 5 of 8 — RAG question answering.** This is an actively developed
 > portfolio project. See [Project status](#project-status) for exactly what is implemented and
 > verified today versus what is planned. Do not assume any feature exists beyond what's listed there.
 
@@ -240,11 +240,72 @@ together via dependency injection.
   in full in [docs/security.md](docs/security.md). The real `documind` database was cleaned of the
   contaminating test data this caused.
 
+### Implemented and verified (Milestone 5 — RAG question answering)
+
+- **Configurable chat-completion provider abstraction**, mirroring the embedding provider from
+  Milestone 4: `Llm:Provider` switches between `Mock` (default — a deterministic, no-API-key
+  implementation) and `OpenAI` (a real chat-completions client with timeout, retry-with-backoff on
+  429/5xx, and no document text or API key ever logged)
+  ([MockLlmProvider.cs](src/DocuMind.Infrastructure/Llm/MockLlmProvider.cs),
+  [OpenAiLlmProvider.cs](src/DocuMind.Infrastructure/Llm/OpenAiLlmProvider.cs)). The mock isn't a
+  canned string: it picks, for each retrieved passage, the sentence that actually shares the most
+  vocabulary with the question, and cites the passage it drew from — verified by 5 unit tests.
+- **Retrieval reused, not reimplemented.** `ISearchService` gained `RetrieveAsync`, returning the
+  same ownership-filtered, threshold-floored, RRF-fused ranking as `/api/search` but with full
+  chunk text instead of a UI-sized excerpt — the RAG pipeline and the search endpoint now share one
+  retrieval implementation rather than two that could drift apart
+  ([SearchService.cs](src/DocuMind.Application/Search/SearchService.cs)).
+- **Grounded answer generation with citation validation that doesn't trust the model.**
+  `RagAnswerGenerator` retrieves context, and — only if something relevant was actually found —
+  asks the LLM to answer using numbered `[n]` passage markers. Every `[n]` marker the model emits
+  is checked against the context blocks that generator itself provided; a marker pointing at a
+  passage number that was never offered (hallucinated or out of range) is silently dropped rather
+  than resolved to the wrong source. If nothing relevant was retrieved, the LLM is never called at
+  all and the user gets an explicit "I don't have enough information in your documents" answer —
+  the same "say so instead of guessing" principle already applied at the search layer, now applied
+  before generation too
+  ([RagAnswerGenerator.cs](src/DocuMind.Application/Chat/RagAnswerGenerator.cs)). Verified by 5
+  unit tests, including one that proves a hallucinated citation marker is dropped and one that
+  proves prior conversation turns are actually replayed to the model.
+- **Conversation persistence**: `Conversation`, `Message`, and `MessageCitation` entities
+  (citations are denormalized — document name, page range, excerpt copied at answer time — so a
+  citation still makes sense in history even if the source document is later deleted or
+  re-indexed). A new conversation's title is derived deterministically from the first question
+  (truncated, no LLM call needed just to name a conversation).
+- **`POST /api/chat/ask`** (start or continue a conversation; grounded answer + validated
+  citations), **`GET /api/chat/conversations`** (the caller's own, newest first),
+  **`GET /api/chat/conversations/{id}`** (full message history), **`DELETE
+  /api/chat/conversations/{id}`** — every one ownership-filtered like every other endpoint in this
+  project. Verified by 11 integration tests against the real pipeline: a grounded answer cites the
+  correct document and page, an unrelated question gets the explicit refusal rather than a
+  fabricated answer, a follow-up question appends to the same conversation, document-scoping and
+  cross-user isolation both hold, and unauthenticated/blank-question requests are rejected
+  correctly.
+- **Chat frontend**: a conversation sidebar (new chat, switch between past conversations, delete),
+  a message thread with each assistant message's citations shown inline (source document, page
+  range, excerpt), and a composer. Driven end-to-end in real headless Chrome against the real
+  running stack: register → upload → ask a grounded question → see the citation with the correct
+  page → start a new chat → ask something the documents don't cover → see the explicit refusal →
+  switch back to the first conversation → delete it. (This milestone has no accompanying
+  screenshot: the local Chrome/dev-server environment became too resource-constrained to capture
+  one in the same session right after the verification run completed. The browser-automation run
+  itself finished successfully before that point.)
+- **A real UI bug found by that end-to-end test, not by inspection**: clicking a conversation deep
+  in the sidebar sometimes navigated the whole app back to the landing page instead of loading it.
+  Root cause: a `scrollIntoView()` call meant to auto-scroll new messages into view was, depending
+  on prior page content, also scrolling the *window* — which pushed the sidebar button off-screen
+  (a negative `getBoundingClientRect().y`), so the click landed on the sticky navbar's logo link
+  instead. Fixed by scrolling the messages container's own `scrollTop` directly instead of calling
+  `scrollIntoView` (which can walk up and scroll ancestor — even window — scrollbars), and by
+  constraining the chat layout (`overflow-hidden` on the page, `min-h-0` on its flex children) so
+  the window itself never needs to scroll on this page at all. Documented in full in
+  [docs/security.md](docs/security.md).
+
 ### Not yet implemented (planned, later milestones)
 
-RAG chat, summaries, conversation persistence, the dashboard/chat/settings pages, OCR for scanned
-PDFs, and the full Docker Compose stack (API + frontend containers) all come in Milestones 5–8.
-Nothing above this line should be assumed to exist.
+Document summaries, the page-level source viewer, OCR for scanned PDFs, and the full Docker
+Compose stack (API + frontend containers) all come in Milestones 6–8. Nothing above this line
+should be assumed to exist.
 
 ## Prerequisites
 
@@ -316,15 +377,17 @@ provider, upload limits, storage directory). Copy it to `.env` for Docker Compos
 dotnet test
 ```
 
-`DocuMind.Tests` has 44 unit tests (file-validation rules, PDF signature checks, sentence-aware
-chunking, mock-embedding determinism/similarity, RRF fusion logic, paged-result math, claims
-parsing) — no I/O, run in well under a second. `DocuMind.IntegrationTests` has 23 tests that spin
-up the real API in-process (`WebApplicationFactory`, one shared instance across all test classes —
-see [docs/security.md](docs/security.md) for why) against a dedicated `documind_test` database on
-the same local Postgres container, covering register/login/logout, the full document
+`DocuMind.Tests` has 61 unit tests (file-validation rules, PDF signature checks, sentence-aware
+chunking, mock-embedding determinism/similarity, RRF fusion logic, mock-LLM grounding/citation
+behavior, RAG citation-marker validation, chat conversation orchestration, paged-result math,
+claims parsing) — no I/O, run in well under a second. `DocuMind.IntegrationTests` has 34 tests
+that spin up the real API in-process (`WebApplicationFactory`, one shared instance across all test
+classes — see [docs/security.md](docs/security.md) for why) against a dedicated `documind_test`
+database on the same local Postgres container, covering register/login/logout, the full document
 upload→list→get→delete lifecycle, cross-user isolation, CSRF rejection, invalid-PDF rejection,
-the full background-indexing pipeline, and semantic/keyword/hybrid search with relevance
-thresholds and document scoping. The `documind_test` database must exist first — see
+the full background-indexing pipeline, semantic/keyword/hybrid search with relevance thresholds
+and document scoping, and grounded chat answers with citation accuracy, conversation continuation,
+and cross-user isolation. The `documind_test` database must exist first — see
 [Troubleshooting](#troubleshooting) if `dotnet test` fails with a connection error.
 
 ## Database and pgvector setup
@@ -357,28 +420,37 @@ of chunks is fine.
   `Content-Type`; stored files use a server-generated name, never the original filename.
 - CORS is restricted to an explicit allow-list of origins (configured in `appsettings.json`).
 - Health check responses do not expose connection strings, stack traces, or other internal detail.
-- Prompt-injection mitigations for AI-generated answers arrive with the RAG milestone and will be
-  documented in [docs/security.md](docs/security.md) at that point.
-- Embedding provider credentials (`Embedding:ApiKey`) follow the same rule as the database
-  connection string: never committed, read from configuration/environment only.
+- Embedding and LLM provider credentials (`Embedding:ApiKey`, `Llm:ApiKey`) follow the same rule as
+  the database connection string: never committed, read from configuration/environment only.
 - A real integration-test isolation bug (two background workers racing across a shared database;
   test config silently losing to real `dotnet user-secrets`) caused tests to run against the real
   local dev database for a time. Found, fixed, and the contaminating data cleaned up — full
   write-up in [docs/security.md](docs/security.md).
+- **Citations are never trusted from the model.** `RagAnswerGenerator` only resolves a `[n]`
+  citation marker to a source if `n` matches a context block it actually retrieved and handed to
+  the model for *this* question — a hallucinated or out-of-range marker is dropped, not resolved to
+  the nearest chunk. Combined with never calling the model at all when nothing relevant was
+  retrieved, this is the project's current prompt-injection-adjacent mitigation: the model can
+  phrase an answer however it wants, but it cannot fabricate a citation that points at a document
+  or page the user didn't actually have indexed. Full prompt-injection mitigation (e.g. a
+  malicious instruction embedded inside a PDF's text) is not yet addressed — see
+  [docs/security.md](docs/security.md).
 
 ## Known limitations
 
-This is Milestone 4 of 8. There is no RAG chat, no summaries, and no conversation persistence
-yet — search finds and ranks relevant passages, but nothing generates an answer from them.
-Scanned/image-only PDFs are detected and explicitly fail (OCR is not implemented). The mock
-embedding provider has no real semantic understanding (it matches on shared vocabulary, not
-meaning) — genuine semantic matching requires configuring a real provider like OpenAI. The
+This is Milestone 5 of 8. There are no document summaries and no page-level source viewer yet —
+chat answers cite a document and page range, but there's no in-app way to jump to and view that
+page. Scanned/image-only PDFs are detected and explicitly fail (OCR is not implemented). The mock
+embedding and LLM providers have no real semantic/language understanding (the mock LLM picks the
+most vocabulary-overlapping sentence from retrieved context — it cannot paraphrase, summarize
+across passages, or truly resolve a follow-up question the way a real model would); genuine
+semantic matching and fluent answers require configuring real providers like OpenAI. The
 background indexing worker is a single in-process `BackgroundService` backed by the database as a
 queue — appropriate at this project's scale, but not safe to run as multiple API instances without
 adding a claim-locking scheme (see [docs/architecture.md](docs/architecture.md)). Logout relies on
 the client discarding the cookie it's told to discard (standard for stateless cookie auth); there
 is no server-side session revocation list. Treat this repository as a verified foundation with
-real auth, document management, indexing, and search, not a complete product yet.
+real auth, document management, indexing, search, and grounded RAG chat, not a complete product yet.
 
 ## Roadmap
 
@@ -404,6 +476,15 @@ answering → summaries & source viewer → security hardening → deployment & 
   don't exist until indexing finishes. If it's genuinely indexed, check `Search:MinSimilarity` in
   `appsettings.json` isn't set unreasonably high, and remember the default Mock embedding provider
   only matches shared vocabulary, not meaning.
+- **Chat always answers "I don't have enough information"** — this is the same relevance floor
+  as search, applied one step earlier: if nothing cleared `Search:MinSimilarity` (or the question
+  shares little vocabulary with anything indexed, which the Mock embedding provider is prone to),
+  the LLM is never even called. Index a relevant document first, or lower `Rag:ContextTopK`/
+  `Search:MinSimilarity` for testing.
+- **A new EF Core migration doesn't apply** — re-run `dotnet-ef database update` (see
+  [step 3](#3-apply-database-migrations)) against both `documind` and, if you're about to run
+  integration tests, `documind_test` picks up new migrations automatically on the next test run
+  (`DocuMindApiFactory.InitializeAsync` calls `Database.MigrateAsync()`).
 
 ## License and attribution
 

@@ -52,3 +52,44 @@ export interface SearchResultItem {
   pageEnd: number
   score: number
 }
+
+export interface CitationDto {
+  chunkId: string
+  documentId: string
+  documentFileName: string
+  pageStart: number
+  pageEnd: number
+  excerpt: string
+}
+
+export type MessageRole = 'user' | 'assistant'
+
+export interface MessageDto {
+  id: string
+  role: MessageRole
+  content: string
+  createdAt: string
+  citations: CitationDto[]
+}
+
+export interface AskResultDto {
+  conversationId: string
+  title: string
+  userMessage: MessageDto
+  assistantMessage: MessageDto
+}
+
+export interface ConversationSummaryDto {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ConversationDetailDto {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  messages: MessageDto[]
+}

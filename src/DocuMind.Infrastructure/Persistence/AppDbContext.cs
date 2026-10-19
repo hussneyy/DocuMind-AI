@@ -14,6 +14,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageCitation> MessageCitations => Set<MessageCitation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +57,43 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             builder.HasOne<Document>()
                 .WithMany()
                 .HasForeignKey(c => c.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Conversation>(builder =>
+        {
+            builder.ToTable("Conversations");
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.Title).HasMaxLength(200).IsRequired();
+            builder.HasIndex(c => c.OwnerUserId);
+            builder.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(c => c.OwnerUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Message>(builder =>
+        {
+            builder.ToTable("Messages");
+            builder.HasKey(m => m.Id);
+            builder.Property(m => m.Content).IsRequired();
+            builder.HasIndex(m => new { m.ConversationId, m.CreatedAt });
+            builder.HasOne<Conversation>()
+                .WithMany()
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MessageCitation>(builder =>
+        {
+            builder.ToTable("MessageCitations");
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.DocumentFileName).HasMaxLength(255).IsRequired();
+            builder.Property(c => c.Excerpt).IsRequired();
+            builder.HasIndex(c => c.MessageId);
+            builder.HasOne<Message>()
+                .WithMany()
+                .HasForeignKey(c => c.MessageId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

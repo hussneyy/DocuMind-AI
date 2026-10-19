@@ -54,6 +54,9 @@ export function Navbar() {
               <Link to="/search" className="text-sm font-medium text-slate-600 hover:text-slate-900">
                 Search
               </Link>
+              <Link to="/chat" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+                Ask AI
+              </Link>
               <span className="hidden text-sm text-slate-500 sm:inline">{user.displayName}</span>
               <Button variant="ghost" size="md" onClick={handleLogout}>
                 Log out

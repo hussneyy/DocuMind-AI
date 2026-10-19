@@ -1,5 +1,7 @@
+using DocuMind.Application.Chat;
 using DocuMind.Application.Documents;
 using DocuMind.Application.Embeddings;
+using DocuMind.Application.Llm;
 using DocuMind.Application.Search;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,11 +17,15 @@ public static class DependencyInjection
         services.Configure<IndexingOptions>(configuration.GetSection(IndexingOptions.SectionName));
         services.Configure<EmbeddingOptions>(configuration.GetSection(EmbeddingOptions.SectionName));
         services.Configure<SearchOptions>(configuration.GetSection(SearchOptions.SectionName));
+        services.Configure<LlmOptions>(configuration.GetSection(LlmOptions.SectionName));
+        services.Configure<RagOptions>(configuration.GetSection(RagOptions.SectionName));
 
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddSingleton<ITextChunker, TextChunker>();
         services.AddScoped<IDocumentIndexer, DocumentIndexer>();
         services.AddScoped<ISearchService, SearchService>();
+        services.AddScoped<IRagAnswerGenerator, RagAnswerGenerator>();
+        services.AddScoped<IChatService, ChatService>();
 
         return services;
     }

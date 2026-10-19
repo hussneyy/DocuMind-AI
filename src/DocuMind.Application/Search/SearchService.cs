@@ -14,6 +14,17 @@ public class SearchService(
 
     public async Task<IReadOnlyList<SearchResultItem>> SearchAsync(Guid ownerUserId, SearchRequest request, CancellationToken ct)
     {
+        var candidates = await RetrieveAsync(ownerUserId, request, ct);
+        var query = request.Query.Trim();
+
+        return candidates
+            .Select(c => new SearchResultItem(
+                c.ChunkId, c.DocumentId, c.DocumentFileName, BuildExcerpt(c.TextContent, query), c.PageStart, c.PageEnd, c.Score))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<ChunkSearchCandidate>> RetrieveAsync(Guid ownerUserId, SearchRequest request, CancellationToken ct)
+    {
         var query = request.Query.Trim();
         if (query.Length == 0)
         {
@@ -44,11 +55,7 @@ public class SearchService(
             _ => ReciprocalRankFusion(semantic, keyword, topK),
         };
 
-        return merged
-            .Take(topK)
-            .Select(c => new SearchResultItem(
-                c.ChunkId, c.DocumentId, c.DocumentFileName, BuildExcerpt(c.TextContent, query), c.PageStart, c.PageEnd, c.Score))
-            .ToList();
+        return merged.Take(topK).ToList();
     }
 
     /// <summary>

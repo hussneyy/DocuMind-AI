@@ -1,10 +1,13 @@
 using DocuMind.Application.Auth;
+using DocuMind.Application.Chat;
 using DocuMind.Application.Documents;
 using DocuMind.Application.Embeddings;
+using DocuMind.Application.Llm;
 using DocuMind.Infrastructure.BackgroundJobs;
 using DocuMind.Infrastructure.Documents;
 using DocuMind.Infrastructure.Embeddings;
 using DocuMind.Infrastructure.Identity;
+using DocuMind.Infrastructure.Llm;
 using DocuMind.Infrastructure.Persistence;
 using DocuMind.Infrastructure.Storage;
 using Microsoft.AspNetCore.Identity;
@@ -42,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
+        services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddScoped<IPdfInspector, PdfPigInspector>();
         services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
@@ -53,6 +57,15 @@ public static class DependencyInjection
             return embeddingOptions.Provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase)
                 ? sp.GetRequiredService<OpenAiEmbeddingProvider>()
                 : ActivatorUtilities.CreateInstance<MockEmbeddingProvider>(sp);
+        });
+
+        services.AddHttpClient<OpenAiLlmProvider>();
+        services.AddScoped<ILlmProvider>(sp =>
+        {
+            var llmOptions = sp.GetRequiredService<IOptions<LlmOptions>>().Value;
+            return llmOptions.Provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase)
+                ? sp.GetRequiredService<OpenAiLlmProvider>()
+                : ActivatorUtilities.CreateInstance<MockLlmProvider>(sp);
         });
 
         services.AddHostedService<DocumentIndexingBackgroundService>();
