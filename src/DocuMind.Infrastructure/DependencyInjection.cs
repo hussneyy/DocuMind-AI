@@ -1,9 +1,11 @@
+using DocuMind.Application.Auditing;
 using DocuMind.Application.Auth;
 using DocuMind.Application.Chat;
 using DocuMind.Application.Documents;
 using DocuMind.Application.Embeddings;
 using DocuMind.Application.Llm;
 using DocuMind.Application.Summaries;
+using DocuMind.Infrastructure.Auditing;
 using DocuMind.Infrastructure.BackgroundJobs;
 using DocuMind.Infrastructure.Documents;
 using DocuMind.Infrastructure.Embeddings;
@@ -43,6 +45,7 @@ public static class DependencyInjection
 
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
 
+        services.AddSingleton<IAuditLogger, AuditLogger>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();

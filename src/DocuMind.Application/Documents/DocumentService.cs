@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using DocuMind.Application.Auditing;
 using DocuMind.Application.Common;
 using DocuMind.Application.Common.Exceptions;
 using DocuMind.Domain.Entities;
@@ -14,7 +15,8 @@ public class DocumentService(
     IFileStorage fileStorage,
     IPdfInspector pdfInspector,
     IOptions<UploadOptions> options,
-    ILogger<DocumentService> logger) : IDocumentService
+    ILogger<DocumentService> logger,
+    IAuditLogger auditLogger) : IDocumentService
 {
     private readonly UploadOptions _options = options.Value;
 
@@ -95,6 +97,7 @@ public class DocumentService(
 
         logger.LogInformation("Document {DocumentId} uploaded by user {UserId} ({PageCount} pages), queued for indexing",
             document.Id, ownerUserId, document.PageCount);
+        auditLogger.Log(AuditEventType.DocumentUploaded, ownerUserId, $"documentId={document.Id} fileName={document.OriginalFileName}");
 
         return ToDto(document);
     }
@@ -126,6 +129,8 @@ public class DocumentService(
         await fileStorage.DeleteAsync(document.StorageKey, ct);
         repository.Remove(document);
         await repository.SaveChangesAsync(ct);
+
+        auditLogger.Log(AuditEventType.DocumentDeleted, ownerUserId, $"documentId={documentId} fileName={document.OriginalFileName}");
     }
 
     public async Task<DocumentDto> RetryAsync(Guid ownerUserId, Guid documentId, CancellationToken ct)

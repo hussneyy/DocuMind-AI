@@ -126,14 +126,102 @@ for a summary.
   chunks exist. It still never fabricates from nothing: a document with zero chunks (shouldn't
   happen once `Indexed`, but checked explicitly) returns a validation error rather than an empty
   or invented summary.
-- **Summary caching could theoretically serve stale content after a re-index.** Documented as a
-  known limitation rather than silently accepted: retrying a document's indexing replaces its
-  chunks, but any previously generated `DocumentSummary` rows for it are left untouched. This is
-  not a security issue (ownership is unaffected either way) but is a correctness gap worth calling
-  out explicitly — a user who retries a failed document and then reopens an old cached summary
-  could see content generated from the document's prior (possibly different, if the PDF itself was
-  somehow replaced — not currently possible via this API) extraction. Fix, if needed later:
-  invalidate cached summaries in the same transaction that replaces a document's chunks.
+- **Correction (originally flagged here as a limitation in Milestone 6, re-checked during
+  Milestone 7's hardening pass): stale cached summaries after a re-index are not actually
+  reachable today.** The concern was that retrying a document's indexing replaces its chunks while
+  leaving old `DocumentSummary` rows untouched. But `RetryAsync` only accepts documents whose
+  `ProcessingStatus` is `Failed` — and `SummaryService.GetOrGenerateAsync` refuses to generate a
+  summary unless the document is `Indexed`. A `Failed` document can never have had chunks (or a
+  summary) in the first place, and an `Indexed` document has no retry/re-index path at all through
+  this API. So there is currently no sequence of calls that produces a stale cached summary. This
+  would become a real gap only if a future milestone added the ability to re-index an
+  already-successfully-indexed document — worth remembering to revisit cache invalidation
+  *then*, not worth building now for a path that doesn't exist.
+
+## Implemented (Milestone 7 — security & quality hardening)
+
+- **Dedicated rate limits for the two kinds of requests that cost real resources beyond a typical
+  database read**: `upload` (`POST /api/documents` — disk I/O plus a PDF parse) and `ai` (`POST
+  /api/chat/ask` and `GET /api/documents/{id}/summary` — a real LLM call). Previously these shared
+  the general request pipeline with no limiter of their own, unlike `auth`. Both are configurable
+  (`RateLimiting:Upload:*`, `RateLimiting:Ai:*`) the same way the existing `auth` limiter already
+  was. Verified against a dedicated, tightly-limited test host by actually exceeding each limit and
+  checking for a real `429` ([RateLimitingApiTests.cs](../src/DocuMind.IntegrationTests/RateLimitingApiTests.cs)).
+- **Audit logging for security-relevant events**, written to a distinctly-named logger category
+  (`DocuMind.Audit`) rather than mixed into general application logs: registration, login success/
+  failure (including which failure reason — no such account, locked out, bad credentials — without
+  changing the *generic* message the client sees, which stays "Invalid email or password" either
+  way), logout, document upload, document delete, and conversation delete
+  ([IAuditLogger.cs](../src/DocuMind.Application/Auditing/IAuditLogger.cs),
+  [AuditLogger.cs](../src/DocuMind.Infrastructure/Auditing/AuditLogger.cs)). Deliberately a tagged
+  log stream, not a new database table — a dedicated audit store would be unjustified complexity
+  at this project's scale, and an operator can already filter or route by logger category in
+  Serilog's `MinimumLevel:Override` configuration. Verified by unit tests asserting each of these
+  service methods actually calls the audit logger with the right event type — and, as importantly,
+  that a *failed* or *not-owned* action (e.g. deleting someone else's conversation) does **not**
+  log a misleading "deleted" audit entry.
+- **Conversation deletion now follows the same ownership-check-then-act pattern every other
+  resource in this app uses.** It previously delegated straight to a no-op-if-not-found repository
+  call, meaning deleting another user's (or a nonexistent) conversation silently returned `204` —
+  inconsistent with documents and search, which both return `404` for the same situation (see
+  Milestone 2's note on why: so the API never confirms *that* a given ID exists for someone else).
+  Fixed so `DELETE /api/chat/conversations/{id}` now also returns `404` in that case, which
+  incidentally also fixed the audit-logging accuracy issue above (the log call only happens after
+  the ownership check passes).
+- **HSTS enabled outside local development** (`app.UseHsts()`), so a real deployment tells
+  browsers to remember this host should only ever be reached over HTTPS, reducing the window for a
+  downgrade/strip attack on a repeat visit. Meaningless in local dev (no real TLS termination to
+  enforce), so gated on environment the same way Swagger already was.
+- **Prompt-injection wording strengthened** in the real (`OpenAI`) provider's system prompt: an
+  explicit rule that retrieved source passages are data to answer from, never instructions to
+  follow, naming the pattern directly ("ignore the above", "reveal your system prompt", "act as").
+  This is a mitigation, not a guarantee — a sufficiently adversarial document could still influence
+  a real model's phrasing — but combined with the citation-validation design (Milestone 5), the
+  model still cannot fabricate a citation to a source the user never actually indexed, regardless
+  of what any document's text tries to instruct it to do.
+- **Full-codebase ownership-check review.** Every controller action that takes a resource ID was
+  re-read end to end for this milestone to confirm it resolves that ID through an owner-filtered
+  repository call before touching anything else. No gaps were found beyond the conversation-delete
+  inconsistency already fixed above — every other endpoint was already correct, going back to the
+  pattern established in Milestone 2.
+
+### A real test-contamination bug, same family as Milestone 4's: two factories racing over shared process environment variables
+
+Adding `RateLimitedApiFactory` (deliberately low rate limits, to prove the limiter actually
+engages) immediately broke the *existing, previously-passing* shared-collection test suite with a
+wave of unrelated `429`s — `ChatApiTests`, `DocumentsApiTests`, and others all started failing with
+"Too Many Requests" the moment the new factory and its tests existed, even though those tests
+never touch the new factory.
+
+**Root cause**: both `DocuMindApiFactory` (the shared collection's host) and the new
+`RateLimitedApiFactory` set their configuration via `Environment.SetEnvironmentVariable(...)` in
+their constructors — this is, as documented in `DocuMindApiFactory`'s own comment, the *only*
+override confirmed to actually reach this app's configuration. But process environment variables
+are global, shared mutable state: xUnit runs different test collections in parallel by default,
+and `WebApplicationFactory` builds its host *lazily*, on first access — not necessarily at
+construction time. If `RateLimitedApiFactory`'s constructor happened to overwrite
+`RateLimiting__Ai__PermitLimit` to `2` while the shared collection's host hadn't yet been forced
+into existence, the shared host would read the *wrong* (low) limit at the moment it finally did
+build — and, since `IConfiguration`'s environment-variable provider doesn't live-reload, it would
+stay stuck at that low limit for its entire remaining lifetime, regardless of any later
+environment variable changes.
+
+**Fix**: the new rate-limit test class joins `DocuMindApiCollection` (`[Collection(DocuMindApiCollection.Name)]`)
+even though it doesn't use that collection's shared fixture at all. Collection fixtures are
+guaranteed constructed — and, since `DocuMindApiFactory.InitializeAsync` forces a host build via
+`Services.CreateScope()`, guaranteed *built* — before any test in that collection runs. Joining the
+collection purely to get that ordering guarantee means the shared host is always fully built,
+holding the correct high limits, before the new tests' low-limit environment variables are ever
+set. Verified by running the full suite together twice in a row after the fix (previously: 35 of
+48 integration tests failed the moment the new factory was added; after: 48/48, repeatably).
+
+**Why this is worth documenting rather than quietly fixing**: it's the same underlying lesson as
+Milestone 4's test-isolation bug, recurring in a new shape — any `WebApplicationFactory`-based
+test setup that configures itself via process environment variables needs to account for *every
+other* factory in the same test binary that does the same thing, not just the ones in its own
+collection. The fix generalizes: a new environment-variable-configured factory should always join
+an existing collection whose fixture is known to force an eager host build, unless it's provably
+the only such factory in the assembly.
 
 ## A real UI bug: a successful click that silently navigated to the wrong page
 
@@ -230,13 +318,9 @@ new dependency, especially one that will parse untrusted user-uploaded files.
 
 ## Not yet implemented (planned)
 
-Rate limiting on the upload, chat-ask, and summary-generation endpoints specifically (they share
-the general request pipeline but have no dedicated limiter the way auth does — summary generation
-in particular triggers a real LLM call and currently has no per-user throttle beyond whatever rate
-limit the configured provider itself enforces), audit logging, HTTPS enforcement in a real
-deployed environment, and full prompt-injection mitigation for content embedded inside a user's own
-documents (see the Milestone 5 note above) all arrive in later milestones. Cached summaries are not
-invalidated when a document is re-indexed (Milestone 6 note above). There is currently no
+Full prompt-injection mitigation for content embedded inside a user's own documents remains
+partial (system-prompt wording plus citation validation — see the Milestone 5/7 notes above —
+rather than content sanitization or structural separation). There is currently no
 mechanism to revoke an issued auth cookie server-side before its natural expiry (standard
 limitation of stateless cookie auth without a token blacklist) — logout depends on the client
 honoring the cookie-clearing `Set-Cookie` response, which every real browser does but which a test

@@ -100,6 +100,21 @@ rules testable without a database or AI provider, and keeps controllers free of 
   viewer's `#page=n` URL fragment, rather than shipping a PDF.js-based custom viewer — the simplest
   thing that actually works in Chromium-based browsers, at the cost of not controlling the viewer's
   own UI or working identically in every browser.
+- **Audit logging is a distinctly-named logger category, not a new database table.** Security
+  events (register, login, logout, document upload/delete, conversation delete) go through
+  `IAuditLogger`, implemented by writing to a logger named `"DocuMind.Audit"` rather than whatever
+  category the calling class would otherwise use. An operator can filter or route this in Serilog's
+  existing `MinimumLevel:Override` configuration, or add a second `WriteTo` sink scoped to that
+  category, without this project taking on a dedicated audit-event persistence layer — unjustified
+  complexity at this scale, and easy to add later if a real requirement (e.g. tamper-evident
+  retention) ever demands more than a log stream.
+- **Rate limiting extends the existing per-policy pattern rather than introducing a new mechanism.**
+  `upload` and `ai` are added the same way `auth` already was in Milestone 2: a named
+  `AddFixedWindowLimiter` policy, configurable via `RateLimiting:<Name>:*`, applied per-action with
+  `[EnableRateLimiting("<name>")]`. The test factory raises all three for its shared, sequential
+  run the same way it already raised `auth`; a separate, deliberately low-limit factory
+  (`RateLimitedApiFactory`) is the only way to actually prove a limiter trips — see
+  [docs/security.md](docs/security.md) for the real test-ordering bug that surfaced while adding it.
 
 ## Milestone roadmap
 

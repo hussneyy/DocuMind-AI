@@ -43,7 +43,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     [Authorize]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
-        await authService.LogoutAsync(ct);
+        await authService.LogoutAsync(User.GetUserId(), ct);
         return NoContent();
     }
 

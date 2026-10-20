@@ -60,8 +60,7 @@ export function ChatPage() {
     setErrors([])
   }
 
-  async function handleDelete(id: string, event: React.MouseEvent) {
-    event.stopPropagation()
+  async function handleDelete(id: string) {
     try {
       await chatApi.deleteConversation(id)
       if (id === activeConversationId) startNewChat()
@@ -104,27 +103,27 @@ export function ChatPage() {
         </Button>
         <ul className="flex flex-col gap-1 overflow-y-auto">
           {conversations.map((conversation) => (
-            <li key={conversation.id}>
+            <li key={conversation.id} className="group flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => openConversation(conversation.id)}
-                className={`group flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                className={`flex-1 truncate rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                   conversation.id === activeConversationId ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                <span className="truncate">{conversation.title}</span>
-                <span
-                  role="button"
-                  aria-label="Delete conversation"
-                  onClick={(e) => handleDelete(conversation.id, e)}
-                  className="shrink-0 rounded px-1 text-slate-400 opacity-0 hover:bg-slate-200 hover:text-slate-700 group-hover:opacity-100"
-                >
-                  ×
-                </span>
+                {conversation.title}
+              </button>
+              <button
+                type="button"
+                aria-label={`Delete conversation "${conversation.title}"`}
+                onClick={() => handleDelete(conversation.id)}
+                className="shrink-0 rounded px-1.5 py-1 text-slate-500 opacity-0 hover:bg-slate-200 hover:text-slate-700 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+              >
+                ×
               </button>
             </li>
           ))}
-          {conversations.length === 0 && <li className="px-3 py-2 text-sm text-slate-400">No conversations yet.</li>}
+          {conversations.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">No conversations yet.</li>}
         </ul>
       </aside>
 

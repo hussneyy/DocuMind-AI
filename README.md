@@ -3,7 +3,7 @@
 Intelligent document search and AI knowledge assistant. Upload PDFs, search them with natural
 language, and get grounded, citation-backed answers — never invented page numbers or quotes.
 
-> **Status: Milestone 6 of 8 — Summaries & source viewer.** This is an actively developed
+> **Status: Milestone 7 of 8 — Security & quality hardening.** This is an actively developed
 > portfolio project. See [Project status](#project-status) for exactly what is implemented and
 > verified today versus what is planned. Do not assume any feature exists beyond what's listed there.
 
@@ -339,11 +339,54 @@ together via dependency injection.
   sized for a focused chat answer) was removed — it now cites every block the caller passes,
   which is what let it meaningfully exercise a 40-chunk Detailed summary.
 
+### Implemented and verified (Milestone 7 — security & quality hardening)
+
+- **Dedicated rate limits for upload and AI-calling endpoints.** `POST /api/documents` (disk I/O
+  plus a real PDF parse) and `POST /api/chat/ask`/`GET /api/documents/{id}/summary` (a real LLM
+  call) previously shared the general request pipeline with no limiter of their own, unlike auth.
+  Both are now configurable the same way (`RateLimiting:Upload:*`, `RateLimiting:Ai:*`) — verified
+  against a dedicated, tightly-limited test host by actually exceeding each limit and confirming a
+  real `429` ([RateLimitingApiTests.cs](src/DocuMind.IntegrationTests/RateLimitingApiTests.cs)).
+- **Audit logging** for registration, login success/failure, logout, document upload/delete, and
+  conversation delete, written to a distinctly-named logger category (`DocuMind.Audit`) rather than
+  mixed into general application logs — an operator can filter or route it separately without a
+  dedicated audit database. Verified by unit tests confirming each of these actions logs the right
+  event, and — just as important — that a *failed* or *not-owned* action never logs a misleading
+  success entry.
+- **Conversation deletion now returns 404 for another user's (or a nonexistent) conversation**,
+  matching every other resource in this app, instead of silently no-op-ing with a `204`. Found
+  during a full ownership-check review of every controller action in the codebase for this
+  milestone — the only inconsistency the review turned up.
+- **HSTS enabled outside local development**, and the real (`OpenAI`) chat provider's system
+  prompt was strengthened with an explicit rule that source passages are data to answer from, never
+  instructions to follow — a mitigation for prompt injection embedded in a user's own documents,
+  on top of the citation-validation design from Milestone 5.
+- **Zero serious/critical accessibility violations**, verified with an automated `axe-core` scan
+  (via real headless Chrome, not a linter) across all seven pages/states — landing, register,
+  login, document library, search results, an active chat conversation, and the document viewer.
+  The scan caught a real, consistent issue: `text-slate-400` text failed WCAG contrast against its
+  background on every page (it's used in the footer, which renders everywhere) — fixed by darkening
+  it to `text-slate-500`. Separately, a real keyboard-accessibility bug was found by inspection and
+  confirmed by an actual Tab-and-Enter keyboard-only interaction test (not just axe's static check):
+  the chat sidebar's delete control was a `<span role="button">` nested *inside* a `<button>` —
+  invalid HTML, and invisible/unreachable for a keyboard-only user since it only appeared on mouse
+  `:hover`. Fixed by making it a real sibling `<button>` that also reveals on `:focus-within`, so
+  Tab can reach it and Enter activates it.
+- **A real test-contamination bug, the same family as Milestone 4's**: adding the tightly-limited
+  rate-limit test factory immediately broke the *existing* shared-collection suite with unrelated
+  429s, because both factories configure themselves via process-wide environment variables and
+  xUnit can run them in parallel. Root-caused and fixed by guaranteeing execution order instead of
+  guessing at timing — full write-up in [docs/security.md](docs/security.md).
+- **Correction**: Milestone 6's docs flagged "stale cached summaries after a re-index" as a known
+  limitation. Re-checked during this milestone's hardening pass — it isn't actually reachable
+  through the API today (retry only applies to `Failed` documents, which never had a summary to
+  begin with). Docs corrected rather than left wrong, and nothing was built for a path that doesn't
+  exist.
+
 ### Not yet implemented (planned, later milestones)
 
-OCR for scanned PDFs, section-by-section summaries (see above), and the full Docker Compose stack
-(API + frontend containers) come in Milestones 7–8. Nothing above this line should be assumed to
-exist.
+OCR for scanned PDFs, section-by-section summaries, and the full Docker Compose stack (API +
+frontend containers) come in Milestone 8. Nothing above this line should be assumed to exist.
 
 ## Prerequisites
 
@@ -415,20 +458,24 @@ provider, upload limits, storage directory). Copy it to `.env` for Docker Compos
 dotnet test
 ```
 
-`DocuMind.Tests` has 69 unit tests (file-validation rules, PDF signature checks, sentence-aware
+`DocuMind.Tests` has 76 unit tests (file-validation rules, PDF signature checks, sentence-aware
 chunking, mock-embedding determinism/similarity, RRF fusion logic, mock-LLM grounding/citation
 behavior, RAG citation-marker validation, chat conversation orchestration, summary generation and
-caching/sampling logic, paged-result math, claims parsing) — no I/O, run in well under a second.
-`DocuMind.IntegrationTests` has 45 tests that spin up the real API in-process
-(`WebApplicationFactory`, one shared instance across all test classes — see
-[docs/security.md](docs/security.md) for why) against a dedicated `documind_test` database on the
-same local Postgres container, covering register/login/logout, the full document
+caching/sampling logic, document upload/delete audit-logging behavior, paged-result math, claims
+parsing) — no I/O, run in well under a second. `DocuMind.IntegrationTests` has 48 tests that spin
+up the real API in-process (`WebApplicationFactory`, one shared instance across all test classes —
+see [docs/security.md](docs/security.md) for why) against a dedicated `documind_test` database on
+the same local Postgres container, covering register/login/logout, the full document
 upload→list→get→delete lifecycle, cross-user isolation, CSRF rejection, invalid-PDF rejection,
 the full background-indexing pipeline, semantic/keyword/hybrid search with relevance thresholds
 and document scoping, grounded chat answers with citation accuracy and conversation continuation,
-and document summaries/file retrieval (caching, regeneration, byte-exact file content, ownership
-isolation). The `documind_test` database must exist first — see
-[Troubleshooting](#troubleshooting) if `dotnet test` fails with a connection error.
+document summaries/file retrieval (caching, regeneration, byte-exact file content, ownership
+isolation), and the upload/ai rate limiters actually returning 429 once exceeded. The
+`documind_test` database must exist first — see [Troubleshooting](#troubleshooting) if
+`dotnet test` fails with a connection error. Accessibility was verified separately with an
+`axe-core` scan across every page in real headless Chrome (zero serious/critical violations) —
+see the Milestone 7 notes above; that scan isn't part of the committed `dotnet test` suite, since
+this project has no JavaScript test runner set up yet (planned for Milestone 8's CI work).
 
 ## Database and pgvector setup
 
@@ -473,30 +520,39 @@ of chunks is fine.
   retrieved, this is the project's current prompt-injection-adjacent mitigation: the model can
   phrase an answer however it wants, but it cannot fabricate a citation that points at a document
   or page the user didn't actually have indexed. Full prompt-injection mitigation (e.g. a
-  malicious instruction embedded inside a PDF's text) is not yet addressed — see
-  [docs/security.md](docs/security.md).
+  malicious instruction embedded inside a PDF's text) is not yet fully addressed — the real
+  provider's system prompt now explicitly tells the model to treat source passages as data, not
+  instructions (Milestone 7), but there's no content sanitization or structural separation beyond
+  that wording — see [docs/security.md](docs/security.md).
 - **The source file endpoint (`GET /api/documents/{id}/file`) is owner-filtered the same way
   every other document endpoint is** — it opens the file via `IDocumentService.OpenFileAsync`,
   which calls the same `IDocumentRepository.GetByIdAsync(ownerUserId, ...)` used everywhere else,
   so there's no separate, easier-to-miss authorization path for "just serve the raw file."
   Verified by an integration test asserting a second user gets 404, never the bytes.
+- **Dedicated rate limits on upload and AI-calling endpoints** (`RateLimiting:Upload:*`,
+  `RateLimiting:Ai:*`), and **audit logging** for registration, login success/failure, logout,
+  document upload/delete, and conversation delete, written to a distinctly-named logger category
+  rather than a new database table. See the Milestone 7 notes above and
+  [docs/security.md](docs/security.md) for the full design and the real cross-test-factory bug
+  found while adding the rate-limit tests.
 
 ## Known limitations
 
-This is Milestone 6 of 8. Scanned/image-only PDFs are detected and explicitly fail (OCR is not
+This is Milestone 7 of 8. Scanned/image-only PDFs are detected and explicitly fail (OCR is not
 implemented). Section-by-section summaries from the original spec are not implemented — the PDF
 extraction pipeline has no heading/structure detection, so there's no real notion of "a section"
-yet (see the Milestone 6 notes above). Cached summaries are not automatically invalidated when a
-document is re-indexed via retry — a stale one persists until explicitly regenerated. The mock
-embedding and LLM providers have no real semantic/language understanding (the mock LLM picks the
-most vocabulary-overlapping sentence from retrieved context — it cannot paraphrase, summarize
-across passages, or truly resolve a follow-up question the way a real model would); genuine
-semantic matching and fluent answers require configuring real providers like OpenAI. The
-background indexing worker is a single in-process `BackgroundService` backed by the database as a
-queue — appropriate at this project's scale, but not safe to run as multiple API instances without
-adding a claim-locking scheme (see [docs/architecture.md](docs/architecture.md)). Logout relies on
+yet (see the Milestone 6 notes above). The mock embedding and LLM providers have no real
+semantic/language understanding (the mock LLM picks the most vocabulary-overlapping sentence from
+retrieved context — it cannot paraphrase, summarize across passages, or truly resolve a follow-up
+question the way a real model would); genuine semantic matching and fluent answers require
+configuring real providers like OpenAI. The background indexing worker is a single in-process
+`BackgroundService` backed by the database as a queue — appropriate at this project's scale, but
+not safe to run as multiple API instances without adding a claim-locking scheme (see
+[docs/architecture.md](docs/architecture.md)). Logout relies on
 the client discarding the cookie it's told to discard (standard for stateless cookie auth); there
-is no server-side session revocation list. Treat this repository as a verified foundation with
+is no server-side session revocation list. Audit entries are a tagged log stream, not a queryable
+database table — fine for this project's scale, but not something you could easily run ad-hoc
+reports against without log-aggregation tooling. Treat this repository as a verified foundation with
 real auth, document management, indexing, search, grounded RAG chat, and document summaries/source
 viewing, not a complete product yet.
 

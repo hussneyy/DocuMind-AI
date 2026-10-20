@@ -1,3 +1,4 @@
+using DocuMind.Application.Auditing;
 using DocuMind.Application.Auth;
 using Microsoft.AspNetCore.Identity;
 
@@ -5,7 +6,8 @@ namespace DocuMind.Infrastructure.Identity;
 
 public class AuthService(
     UserManager<ApplicationUser> userManager,
-    SignInManager<ApplicationUser> signInManager) : IAuthService
+    SignInManager<ApplicationUser> signInManager,
+    IAuditLogger auditLogger) : IAuthService
 {
     public async Task<AuthResult> RegisterAsync(string email, string password, string displayName, CancellationToken ct)
     {
@@ -24,6 +26,7 @@ public class AuthService(
         }
 
         await signInManager.SignInAsync(user, isPersistent: true);
+        auditLogger.Log(AuditEventType.UserRegistered, user.Id, $"email={email}");
 
         return AuthResult.Success(ToDto(user));
     }
@@ -33,6 +36,7 @@ public class AuthService(
         var user = await userManager.FindByEmailAsync(email);
         if (user is null)
         {
+            auditLogger.Log(AuditEventType.LoginFailed, null, $"email={email} reason=no-such-account");
             return AuthResult.Failure(["Invalid email or password."]);
         }
 
@@ -40,20 +44,24 @@ public class AuthService(
 
         if (result.IsLockedOut)
         {
+            auditLogger.Log(AuditEventType.LoginFailed, user.Id, $"email={email} reason=locked-out");
             return AuthResult.Failure(["Too many failed attempts. Please try again later."]);
         }
 
         if (!result.Succeeded)
         {
+            auditLogger.Log(AuditEventType.LoginFailed, user.Id, $"email={email} reason=bad-credentials");
             return AuthResult.Failure(["Invalid email or password."]);
         }
 
+        auditLogger.Log(AuditEventType.UserLoggedIn, user.Id, $"email={email}");
         return AuthResult.Success(ToDto(user));
     }
 
-    public async Task LogoutAsync(CancellationToken ct)
+    public async Task LogoutAsync(Guid userId, CancellationToken ct)
     {
         await signInManager.SignOutAsync();
+        auditLogger.Log(AuditEventType.UserLoggedOut, userId, "logout");
     }
 
     public async Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken ct)

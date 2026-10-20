@@ -127,7 +127,7 @@ export function LandingPage() {
 
         <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Question</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Question</p>
             <p className="mt-1 text-slate-800">"When is the final exam registration deadline?"</p>
           </div>
 

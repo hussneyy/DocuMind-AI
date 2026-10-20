@@ -31,10 +31,14 @@ public class DocuMindApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Storage__Directory", StorageDirectory);
 
         // The whole suite shares one host (see DocuMindApiCollection) and makes many rapid
-        // register/login calls — raise the limit well above the production default rather than
-        // disabling it, so the limiter itself still gets exercised implicitly.
+        // register/login/upload/chat/summary calls — raise every limit well above the production
+        // default rather than disabling it, so each limiter itself still gets exercised implicitly.
         Environment.SetEnvironmentVariable("RateLimiting__Auth__PermitLimit", "1000");
         Environment.SetEnvironmentVariable("RateLimiting__Auth__WindowSeconds", "60");
+        Environment.SetEnvironmentVariable("RateLimiting__Upload__PermitLimit", "1000");
+        Environment.SetEnvironmentVariable("RateLimiting__Upload__WindowSeconds", "60");
+        Environment.SetEnvironmentVariable("RateLimiting__Ai__PermitLimit", "1000");
+        Environment.SetEnvironmentVariable("RateLimiting__Ai__WindowSeconds", "60");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

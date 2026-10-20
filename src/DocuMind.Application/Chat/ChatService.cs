@@ -1,3 +1,4 @@
+using DocuMind.Application.Auditing;
 using DocuMind.Application.Common.Exceptions;
 using DocuMind.Domain.Entities;
 using DocuMind.Domain.Enums;
@@ -6,7 +7,8 @@ namespace DocuMind.Application.Chat;
 
 public class ChatService(
     IConversationRepository conversationRepository,
-    IRagAnswerGenerator ragAnswerGenerator) : IChatService
+    IRagAnswerGenerator ragAnswerGenerator,
+    IAuditLogger auditLogger) : IChatService
 {
     private const int TitleMaxLength = 60;
 
@@ -121,8 +123,17 @@ public class ChatService(
         return new ConversationDetailDto(conversation.Id, conversation.Title, conversation.CreatedAt, conversation.UpdatedAt, messageDtos);
     }
 
-    public Task DeleteConversationAsync(Guid ownerUserId, Guid conversationId, CancellationToken ct) =>
-        conversationRepository.DeleteAsync(ownerUserId, conversationId, ct);
+    public async Task DeleteConversationAsync(Guid ownerUserId, Guid conversationId, CancellationToken ct)
+    {
+        // Ownership-check-then-act, the same pattern DocumentService.DeleteAsync uses — both so a
+        // request for someone else's conversation gets a 404 like every other resource in this
+        // app, and so the audit log below only fires when something was actually deleted.
+        _ = await conversationRepository.GetAsync(ownerUserId, conversationId, ct)
+            ?? throw new NotFoundException("Conversation not found.");
+
+        await conversationRepository.DeleteAsync(ownerUserId, conversationId, ct);
+        auditLogger.Log(AuditEventType.ConversationDeleted, ownerUserId, $"conversationId={conversationId}");
+    }
 
     private static MessageDto ToDto(Message message, IReadOnlyList<MessageCitation> citations) => new(
         message.Id,

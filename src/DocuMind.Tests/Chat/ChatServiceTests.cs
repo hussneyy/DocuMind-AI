@@ -1,3 +1,4 @@
+using DocuMind.Application.Auditing;
 using DocuMind.Application.Chat;
 using DocuMind.Application.Common.Exceptions;
 using DocuMind.Domain.Entities;
@@ -12,7 +13,7 @@ public class ChatServiceTests
     {
         var repository = new FakeConversationRepository();
         var generator = new FakeRagAnswerGenerator(new RagAnswer("The answer.", [], ContextWasAvailable: true));
-        var service = new ChatService(repository, generator);
+        var service = new ChatService(repository, generator, new FakeAuditLogger());
         var ownerUserId = Guid.NewGuid();
 
         var result = await service.AskAsync(ownerUserId, null, "What is the deadline?", null, CancellationToken.None);
@@ -28,7 +29,7 @@ public class ChatServiceTests
     {
         var repository = new FakeConversationRepository();
         var generator = new FakeRagAnswerGenerator(new RagAnswer("answer", [], true));
-        var service = new ChatService(repository, generator);
+        var service = new ChatService(repository, generator, new FakeAuditLogger());
         var longQuestion = string.Join(' ', Enumerable.Repeat("word", 30));
 
         await service.AskAsync(Guid.NewGuid(), null, longQuestion, null, CancellationToken.None);
@@ -41,7 +42,7 @@ public class ChatServiceTests
     [Fact]
     public async Task AskAsync_WithBlankQuestion_ThrowsValidation()
     {
-        var service = new ChatService(new FakeConversationRepository(), new FakeRagAnswerGenerator(new RagAnswer("x", [], true)));
+        var service = new ChatService(new FakeConversationRepository(), new FakeRagAnswerGenerator(new RagAnswer("x", [], true)), new FakeAuditLogger());
 
         await Assert.ThrowsAsync<AppValidationException>(() =>
             service.AskAsync(Guid.NewGuid(), null, "   ", null, CancellationToken.None));
@@ -50,7 +51,7 @@ public class ChatServiceTests
     [Fact]
     public async Task AskAsync_WithAnUnknownConversationId_ThrowsNotFound()
     {
-        var service = new ChatService(new FakeConversationRepository(), new FakeRagAnswerGenerator(new RagAnswer("x", [], true)));
+        var service = new ChatService(new FakeConversationRepository(), new FakeRagAnswerGenerator(new RagAnswer("x", [], true)), new FakeAuditLogger());
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             service.AskAsync(Guid.NewGuid(), Guid.NewGuid(), "question", null, CancellationToken.None));
@@ -62,7 +63,7 @@ public class ChatServiceTests
         var repository = new FakeConversationRepository();
         var ownerUserId = Guid.NewGuid();
         var generator = new FakeRagAnswerGenerator(new RagAnswer("second answer", [], true));
-        var service = new ChatService(repository, generator);
+        var service = new ChatService(repository, generator, new FakeAuditLogger());
 
         var first = await service.AskAsync(ownerUserId, null, "first question", null, CancellationToken.None);
         await service.AskAsync(ownerUserId, first.ConversationId, "second question", null, CancellationToken.None);
@@ -79,7 +80,7 @@ public class ChatServiceTests
         var citation = new RagCitation(Guid.NewGuid(), Guid.NewGuid(), "handbook.pdf", 2, 2, "excerpt");
         var repository = new FakeConversationRepository();
         var generator = new FakeRagAnswerGenerator(new RagAnswer("answer [1]", [citation], true));
-        var service = new ChatService(repository, generator);
+        var service = new ChatService(repository, generator, new FakeAuditLogger());
 
         var result = await service.AskAsync(Guid.NewGuid(), null, "question", null, CancellationToken.None);
 
@@ -94,7 +95,7 @@ public class ChatServiceTests
         var repository = new FakeConversationRepository();
         var ownerUserId = Guid.NewGuid();
         var generator = new FakeRagAnswerGenerator(new RagAnswer("a1", [], true));
-        var service = new ChatService(repository, generator);
+        var service = new ChatService(repository, generator, new FakeAuditLogger());
 
         var ask1 = await service.AskAsync(ownerUserId, null, "q1", null, CancellationToken.None);
         await service.AskAsync(ownerUserId, ask1.ConversationId, "q2", null, CancellationToken.None);
@@ -103,6 +104,52 @@ public class ChatServiceTests
 
         Assert.Equal(4, detail.Messages.Count);
         Assert.Equal(["q1", "a1", "q2", "a1"], detail.Messages.Select(m => m.Content));
+    }
+
+    [Fact]
+    public async Task DeleteConversationAsync_ForAnUnknownConversation_ThrowsNotFound()
+    {
+        var service = new ChatService(new FakeConversationRepository(), new FakeRagAnswerGenerator(new RagAnswer("x", [], true)), new FakeAuditLogger());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.DeleteConversationAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task DeleteConversationAsync_ForAnOwnedConversation_DeletesItAndAudits()
+    {
+        var repository = new FakeConversationRepository();
+        var auditLogger = new FakeAuditLogger();
+        var ownerUserId = Guid.NewGuid();
+        var service = new ChatService(repository, new FakeRagAnswerGenerator(new RagAnswer("x", [], true)), auditLogger);
+
+        var result = await service.AskAsync(ownerUserId, null, "question", null, CancellationToken.None);
+        await service.DeleteConversationAsync(ownerUserId, result.ConversationId, CancellationToken.None);
+
+        Assert.Empty(repository.Conversations);
+        Assert.Contains(auditLogger.Entries, e => e.EventType == AuditEventType.ConversationDeleted && e.UserId == ownerUserId);
+    }
+
+    [Fact]
+    public async Task DeleteConversationAsync_ForAnotherUsersConversation_ThrowsNotFoundAndDoesNotAudit()
+    {
+        var repository = new FakeConversationRepository();
+        var auditLogger = new FakeAuditLogger();
+        var service = new ChatService(repository, new FakeRagAnswerGenerator(new RagAnswer("x", [], true)), auditLogger);
+
+        var result = await service.AskAsync(Guid.NewGuid(), null, "question", null, CancellationToken.None);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.DeleteConversationAsync(Guid.NewGuid(), result.ConversationId, CancellationToken.None));
+        Assert.DoesNotContain(auditLogger.Entries, e => e.EventType == AuditEventType.ConversationDeleted);
+    }
+
+    private sealed class FakeAuditLogger : IAuditLogger
+    {
+        public List<(AuditEventType EventType, Guid? UserId, string Details)> Entries { get; } = [];
+
+        public void Log(AuditEventType eventType, Guid? userId, string details) =>
+            Entries.Add((eventType, userId, details));
     }
 
     private sealed class FakeConversationRepository : IConversationRepository

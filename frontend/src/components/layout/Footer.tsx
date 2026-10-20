@@ -12,10 +12,10 @@ export function Footer() {
           </div>
 
           <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-slate-500">
-            <span className="cursor-default text-slate-400" title="See the project README once published">
+            <span className="cursor-default text-slate-500" title="See the project README once published">
               Documentation
             </span>
-            <span className="cursor-default text-slate-400" title="See the project README once published">
+            <span className="cursor-default text-slate-500" title="See the project README once published">
               Source code
             </span>
             <a href="#privacy" className="hover:text-slate-900">
@@ -24,7 +24,7 @@ export function Footer() {
           </div>
         </div>
 
-        <p className="mt-8 text-xs text-slate-400">
+        <p className="mt-8 text-xs text-slate-500">
           &copy; {new Date().getFullYear()} DocuMind AI. Built for demonstration purposes.
         </p>
       </div>

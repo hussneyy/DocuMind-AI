@@ -64,6 +64,14 @@ builder.Services.ConfigureApplicationCookie(options =>
 var authRateLimitPermits = builder.Configuration.GetValue("RateLimiting:Auth:PermitLimit", 10);
 var authRateLimitWindowSeconds = builder.Configuration.GetValue("RateLimiting:Auth:WindowSeconds", 60);
 
+// Upload and "ai" (anything that triggers a real LLM call — chat ask, summary generation) get
+// their own limiters: both are meaningfully more expensive per-request than a typical read, so
+// they're throttled separately from the general request pipeline rather than left unbounded.
+var uploadRateLimitPermits = builder.Configuration.GetValue("RateLimiting:Upload:PermitLimit", 20);
+var uploadRateLimitWindowSeconds = builder.Configuration.GetValue("RateLimiting:Upload:WindowSeconds", 60);
+var aiRateLimitPermits = builder.Configuration.GetValue("RateLimiting:Ai:PermitLimit", 30);
+var aiRateLimitWindowSeconds = builder.Configuration.GetValue("RateLimiting:Ai:WindowSeconds", 60);
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -71,6 +79,20 @@ builder.Services.AddRateLimiter(options =>
     {
         limiterOptions.PermitLimit = authRateLimitPermits;
         limiterOptions.Window = TimeSpan.FromSeconds(authRateLimitWindowSeconds);
+        limiterOptions.QueueLimit = 0;
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+    options.AddFixedWindowLimiter("upload", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = uploadRateLimitPermits;
+        limiterOptions.Window = TimeSpan.FromSeconds(uploadRateLimitWindowSeconds);
+        limiterOptions.QueueLimit = 0;
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+    options.AddFixedWindowLimiter("ai", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = aiRateLimitPermits;
+        limiterOptions.Window = TimeSpan.FromSeconds(aiRateLimitWindowSeconds);
         limiterOptions.QueueLimit = 0;
         limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
     });
@@ -109,6 +131,12 @@ if (app.Environment.IsDevelopment())
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "DocuMind AI API v1");
     });
+}
+else
+{
+    // Tells browsers to remember this host should only ever be reached over HTTPS — meaningless
+    // in local Development (no real TLS termination to enforce), so only enabled otherwise.
+    app.UseHsts();
 }
 
 app.UseSerilogRequestLogging();

@@ -7,7 +7,7 @@ public interface IAuthService
     /// <summary>Validates credentials and, on success, signs the user into the current HTTP context.</summary>
     Task<AuthResult> LoginAsync(string email, string password, CancellationToken ct);
 
-    Task LogoutAsync(CancellationToken ct);
+    Task LogoutAsync(Guid userId, CancellationToken ct);
 
     Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken ct);
 }

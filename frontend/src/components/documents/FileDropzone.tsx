@@ -46,7 +46,7 @@ export function FileDropzone({ onFileSelected, disabled }: FileDropzoneProps) {
           browse
         </label>
       </p>
-      <p className="text-xs text-slate-400">PDF files only, up to 25 MB</p>
+      <p className="text-xs text-slate-500">PDF files only, up to 25 MB</p>
       <input
         ref={inputRef}
         id={inputId}

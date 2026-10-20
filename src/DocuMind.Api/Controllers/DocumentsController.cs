@@ -4,6 +4,7 @@ using DocuMind.Application.Summaries;
 using DocuMind.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DocuMind.Api.Controllers;
 
@@ -14,6 +15,7 @@ public class DocumentsController(IDocumentService documentService, ISummaryServi
 {
     [HttpPost]
     [RequestSizeLimit(30_000_000)]
+    [EnableRateLimiting("upload")]
     public async Task<IActionResult> Upload(IFormFile? file, CancellationToken ct)
     {
         if (file is null)
@@ -91,6 +93,7 @@ public class DocumentsController(IDocumentService documentService, ISummaryServi
     }
 
     [HttpGet("{id:guid}/summary")]
+    [EnableRateLimiting("ai")]
     public async Task<IActionResult> GetSummary(
         Guid id, [FromQuery] string type = "Short", [FromQuery] bool regenerate = false, CancellationToken ct = default)
     {

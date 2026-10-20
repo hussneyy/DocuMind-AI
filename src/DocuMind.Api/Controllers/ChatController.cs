@@ -3,6 +3,7 @@ using DocuMind.Api.Extensions;
 using DocuMind.Application.Chat;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace DocuMind.Api.Controllers;
 
@@ -12,6 +13,7 @@ namespace DocuMind.Api.Controllers;
 public class ChatController(IChatService chatService) : ControllerBase
 {
     [HttpPost("ask")]
+    [EnableRateLimiting("ai")]
     public async Task<IActionResult> Ask(AskRequestDto request, CancellationToken ct)
     {
         var result = await chatService.AskAsync(User.GetUserId(), request.ConversationId, request.Question, request.DocumentIds, ct);
