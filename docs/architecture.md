@@ -12,9 +12,12 @@ DocuMind/
     DocuMind.Infrastructure/   EF Core + Npgsql + pgvector, AI providers, PDF processing, file storage
     DocuMind.Tests/            Unit tests
     DocuMind.IntegrationTests/ Integration tests against DocuMind.Api
-  frontend/                    React + TypeScript + Vite application
+  frontend/                    React + TypeScript + Vite application, with its own Dockerfile + nginx.conf
   docs/                        This documentation
-  docker-compose.yml           Local PostgreSQL + pgvector (API/frontend containers added in Milestone 8)
+  demo-data/                   Sample PDFs for scripts/seed-demo-data.ps1
+  scripts/                     Operational scripts (demo-data seeding)
+  .github/workflows/           GitHub Actions CI (backend test, frontend build)
+  docker-compose.yml           Full stack: postgres + api + frontend
 ```
 
 Dependency direction is strictly inward: `Api → Application → Domain`, and
@@ -115,6 +118,28 @@ rules testable without a database or AI provider, and keeps controllers free of 
   run the same way it already raised `auth`; a separate, deliberately low-limit factory
   (`RateLimitedApiFactory`) is the only way to actually prove a limiter trips — see
   [docs/security.md](docs/security.md) for the real test-ordering bug that surfaced while adding it.
+- **The frontend container reverse-proxies to the API rather than the browser calling it
+  cross-origin.** `frontend/nginx.conf` proxies `/api/*` and `/health/*` to the `api` service
+  (reached by its Compose service name over Docker's embedded DNS), so the browser only ever sees
+  one origin. This wasn't the only option — the alternative was keeping two separate origins (like
+  local dev's Vite-port setup) and relying on the existing CORS policy — but same-origin is
+  strictly simpler for a deployed stack: no CORS configuration to get right, and the auth cookie's
+  `SameSite=Lax` behaves the same straightforward way it does for any single-origin site, rather
+  than depending on CORS credentials being configured correctly.
+- **Database migration-on-startup is config-gated, not environment-gated.** The API can apply
+  pending EF Core migrations itself at boot (`Database:MigrateOnStartup`), but this is read from
+  configuration rather than tied to `ASPNETCORE_ENVIRONMENT`, specifically so it stays off by
+  default for every workflow this project had before Milestone 8 (local `dotnet run`'s explicit
+  `dotnet-ef database update`, and the test factory's own `MigrateAsync` call in
+  `InitializeAsync`) and on for exactly the one new workflow that actually needs it — Docker
+  Compose has no separate migration step, so the container has to be self-contained.
+- **The Docker Compose stack runs the API in the `Development` ASP.NET Core environment.** Not
+  because it's "closer to how a developer runs it," but because this specific stack has no real
+  TLS termination in front of it, and the cookie's `CookieSecurePolicy` is `Secure`-only outside
+  Development — `Production` here would mark the auth cookie `Secure` and every browser would
+  correctly refuse to send it back over plain `http://localhost`, breaking login. A deployment
+  behind a real TLS-terminating reverse proxy should set `Production` instead; this is a property
+  of *this* local/demo topology, not a blanket recommendation.
 
 ## Milestone roadmap
 

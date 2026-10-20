@@ -6,6 +6,7 @@ using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -120,6 +121,18 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Opt-in, off by default: local `dotnet run` development uses `dotnet-ef database update`
+// explicitly (see README), and the integration test factory migrates itself in InitializeAsync.
+// This exists so the Docker Compose stack — which has no separate migration step — is otherwise
+// self-contained; it only runs when Database:MigrateOnStartup is explicitly set, which only
+// docker-compose.yml does.
+if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+{
+    using var migrationScope = app.Services.CreateScope();
+    var dbContext = migrationScope.ServiceProvider.GetRequiredService<DocuMind.Infrastructure.Persistence.AppDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();

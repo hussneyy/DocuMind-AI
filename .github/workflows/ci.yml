@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend build & test
+    runs-on: ubuntu-latest
+
+    # Same image docker-compose.yml and local development use, so CI exercises the real pgvector
+    # extension the same way — not a plain postgres image that would silently hide a migration
+    # that depends on it.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: documind
+          POSTGRES_USER: documind
+          POSTGRES_PASSWORD: documind_dev_local_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U documind -d documind"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # DocuMind.IntegrationTests targets a separate "documind_test" database on the same server
+      # (see docs/security.md for why) — DocuMindApiFactory migrates its schema automatically, but
+      # the database itself has to already exist, same as the documented local setup step.
+      - name: Create documind_test database
+        env:
+          PGPASSWORD: documind_dev_local_only
+        run: psql -h localhost -U documind -d documind -c "CREATE DATABASE documind_test;"
+
+      - name: Restore
+        run: dotnet restore DocuMind.sln
+
+      - name: Build
+        run: dotnet build DocuMind.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test DocuMind.sln --no-build -c Release --verbosity normal
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run build

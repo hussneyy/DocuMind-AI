@@ -1,0 +1,14 @@
+# Build context for the Api image is the repository root (see docker-compose.yml) — keep it to
+# just what the Dockerfile actually COPYs.
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+frontend/
+docs/
+*.md
+.git/
+.github/
+.env
+.env.local
+storage/

@@ -3,9 +3,11 @@
 Intelligent document search and AI knowledge assistant. Upload PDFs, search them with natural
 language, and get grounded, citation-backed answers — never invented page numbers or quotes.
 
-> **Status: Milestone 7 of 8 — Security & quality hardening.** This is an actively developed
-> portfolio project. See [Project status](#project-status) for exactly what is implemented and
-> verified today versus what is planned. Do not assume any feature exists beyond what's listed there.
+> **Status: Milestone 8 of 8 — Deployment & portfolio readiness. All 8 planned milestones are
+> complete.** See [Project status](#project-status) for exactly what is implemented and verified
+> — and [Known limitations](#known-limitations) for the honest, permanent gaps (OCR, section-by-
+> section summaries) that remain by design rather than oversight. Do not assume any feature exists
+> beyond what's listed there.
 
 ## Problem statement
 
@@ -77,7 +79,9 @@ together via dependency injection.
 **Backend:** C#, ASP.NET Core Web API (.NET 10), Entity Framework Core 10, Npgsql, Serilog, Swashbuckle (OpenAPI/Swagger).
 **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, React Router, Axios.
 **Database:** PostgreSQL 16 with the pgvector extension.
-**Dev/Ops:** Docker Compose, GitHub Actions (planned), xUnit.
+**Dev/Ops:** Docker Compose (full stack: Postgres + API + frontend, each with its own
+Dockerfile), GitHub Actions CI (backend build/test against a real Postgres service container,
+frontend build), xUnit.
 
 ## Project status
 
@@ -383,21 +387,111 @@ together via dependency injection.
   begin with). Docs corrected rather than left wrong, and nothing was built for a path that doesn't
   exist.
 
-### Not yet implemented (planned, later milestones)
+### Implemented and verified (Milestone 8 — deployment & portfolio readiness)
 
-OCR for scanned PDFs, section-by-section summaries, and the full Docker Compose stack (API +
-frontend containers) come in Milestone 8. Nothing above this line should be assumed to exist.
+- **A full Docker Compose stack** — `postgres` (already existed), plus new `api` and `frontend`
+  services, each with its own multi-stage `Dockerfile`
+  ([src/DocuMind.Api/Dockerfile](src/DocuMind.Api/Dockerfile),
+  [frontend/Dockerfile](frontend/Dockerfile)). The frontend container is nginx serving the built
+  SPA *and* reverse-proxying `/api/*` and `/health/*` to the API container
+  ([frontend/nginx.conf](frontend/nginx.conf)) — deliberately so the browser only ever talks to
+  one origin, meaning the deployed stack needs zero CORS configuration (unlike local dev's
+  separate Vite-port setup) and the auth cookie's `SameSite=Lax` just works. The API container
+  applies pending EF Core migrations at startup itself (`Database:MigrateOnStartup`, opt-in via an
+  env var only `docker-compose.yml` sets — local `dotnet run` still uses `dotnet-ef database
+  update` explicitly, and the test factory still migrates itself the way it always has), since
+  this stack has no separate migration step. Verified by actually running `docker compose up
+  --build` from a clean state and driving the full flow (register → upload → index → search →
+  chat → summarize → view source) against `http://localhost:8080` in real headless Chrome — not
+  just confirming the containers started.
+- **The Compose stack runs the API with `ASPNETCORE_ENVIRONMENT=Development`, deliberately — not
+  an oversight.** This is a local/demo stack with no real TLS termination in front of it. The
+  cookie's `CookieSecurePolicy` is `Secure`-only outside Development; `Production` here would mark
+  the auth cookie `Secure` and browsers would silently refuse to send it back over plain
+  `http://localhost`, breaking login. A real deployment behind a TLS-terminating reverse proxy or
+  load balancer should set this to `Production` instead. Documented in
+  [docs/security.md](docs/security.md) and as an inline comment in `docker-compose.yml` itself, so
+  the reasoning travels with the config that depends on it, not just this README.
+- **GitHub Actions CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)): a `backend` job
+  that runs the real `pgvector/pgvector:pg16` image as a service container (the same image
+  everything else in this project uses — not a plain `postgres` image that would silently hide a
+  migration depending on the extension), creates the `documind_test` database, and runs
+  `dotnet build` + `dotnet test`; a `frontend` job that runs `npm ci` + `npm run build`. Honest
+  caveat: this repository has no Git remote configured yet, so this workflow has **not actually
+  run on a GitHub Actions runner** — its steps mirror exactly the local commands already verified
+  above (`dotnet test`, `npm run build`), but "mirrors verified local steps" is not the same claim
+  as "has been seen green in CI." It will run automatically on the first push once this repository
+  has a GitHub remote.
+- **Demo data**: two realistic, multi-page sample PDFs committed under
+  [demo-data/](demo-data/) (a student handbook and an employee onboarding guide, each with
+  concrete, citable facts — deadlines, policy numbers, named offices) and
+  [scripts/seed-demo-data.ps1](scripts/seed-demo-data.ps1), which registers a demo account and
+  uploads both through the *real* API — not a database-direct seed that would bypass the real
+  upload/validation/indexing pipeline — so a freshly-started stack has real, grounded content to
+  search, chat about, and summarize within seconds of running one script.
+- **This README** was rewritten for a reader seeing the project for the first time: a Docker
+  Compose quickstart is now the primary path (see [Getting started](#getting-started)), with the
+  previous multi-step manual setup kept as the "without Docker" alternative for active development.
+- **A real data-corruption risk caught before it happened, not after**: `git add`ing the two demo
+  PDFs printed Git's routine "LF will be replaced by CRLF" warning — normally harmless, but these
+  are *binary* files, and Git's line-ending normalization doesn't know that unless told. Converting
+  LF bytes to CRLF inside a PDF would have corrupted it (PDF's `xref` table is exact byte offsets).
+  Added a [.gitattributes](.gitattributes) marking `*.pdf`/`*.png`/`*.jpg`/`*.ico` as binary, then
+  verified the fix actually worked by comparing `git hash-object` on the working-tree file against
+  the blob hash Git recorded in the index — not just re-reading the warning text and assuming it
+  was gone.
+
+### Known, permanent limitations (not deferred to a future milestone — there isn't one)
+
+OCR for scanned/image-only PDFs and section-by-section summaries (the PDF extraction pipeline has
+no heading/structure detection) were explicitly out of scope throughout this project and remain
+unimplemented now that all 8 milestones are complete — see [Known limitations](#known-limitations)
+below for the full list, including ones that are genuine trade-offs rather than missing work.
 
 ## Prerequisites
 
-- [.NET SDK 10](https://dotnet.microsoft.com/download) (developed against 10.0.301)
-- [Node.js](https://nodejs.org/) 20+ (developed against 24.20.0 LTS) and npm
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for PostgreSQL + pgvector)
-- Git
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — for the Docker Compose
+  quickstart below, and for PostgreSQL + pgvector either way.
+- For local (non-Docker) development of the app itself, also:
+  [.NET SDK 10](https://dotnet.microsoft.com/download) (developed against 10.0.301),
+  [Node.js](https://nodejs.org/) 20+ (developed against 24.20.0 LTS) and npm.
+- Git.
 
 ## Getting started
 
-### 1. Start PostgreSQL (with pgvector)
+### Quickstart: the full stack with Docker Compose
+
+The fastest way to see the whole thing running — Postgres, the API, and the frontend, all built
+from source, with no paid API key needed (the AI providers default to `Mock`):
+
+```powershell
+docker compose up -d --build
+```
+
+Wait about 30-60 seconds for the first build, then open **http://localhost:8080**. The API is
+separately reachable at http://localhost:5180 (Swagger UI at `/swagger`) if you want to poke at
+it directly. To populate the app with real, citable sample content instead of starting from an
+empty library:
+
+```powershell
+./scripts/seed-demo-data.ps1
+```
+
+This registers a demo account (prints the password it used when it's done) and uploads two
+sample documents — see [Demo data](#demo-data) below. Stop everything with `docker compose down`
+(add `-v` to also delete the Postgres/upload-storage volumes and start completely fresh next time).
+
+This stack intentionally runs the API with `ASPNETCORE_ENVIRONMENT=Development` — see the
+Milestone 8 notes above and [docs/security.md](docs/security.md) for why that's a deliberate
+choice for a stack with no real TLS termination, not an oversight.
+
+### Local development (without Docker for the app itself)
+
+Still uses Docker for Postgres only; everything else runs directly on your machine, which is more
+convenient for active development (faster rebuilds, debugger attach, etc.) than rebuilding
+containers on every change.
+
+#### 1. Start PostgreSQL (with pgvector)
 
 ```powershell
 docker compose up -d postgres
@@ -406,7 +500,7 @@ docker compose up -d postgres
 This starts PostgreSQL 16 with the pgvector extension available, on `localhost:5432`, using the
 credentials in `docker-compose.yml` (override via a `.env` file copied from `.env.example`).
 
-### 2. Configure the backend's database connection
+#### 2. Configure the backend's database connection
 
 The committed `appsettings.json` only contains a placeholder connection string. For local
 development, set the real one via user secrets (never commit real credentials):
@@ -416,14 +510,14 @@ cd src/DocuMind.Api
 dotnet user-secrets set "ConnectionStrings:Postgres" "Host=localhost;Port=5432;Database=documind;Username=documind;Password=documind_dev_local_only"
 ```
 
-### 3. Apply database migrations
+#### 3. Apply database migrations
 
 ```powershell
 dotnet tool install --global dotnet-ef   # once
 dotnet-ef database update --project src/DocuMind.Infrastructure --startup-project src/DocuMind.Api
 ```
 
-### 4. Run the backend
+#### 4. Run the backend
 
 ```powershell
 dotnet build
@@ -434,7 +528,7 @@ dotnet run --project src/DocuMind.Api
 - Liveness: http://localhost:5180/health/live
 - Readiness (checks the database): http://localhost:5180/health/ready
 
-### 5. Run the frontend
+#### 5. Run the frontend
 
 ```powershell
 cd frontend
@@ -443,7 +537,20 @@ npm run dev
 ```
 
 Open http://localhost:5173. The Vite dev server proxies `/api/*` requests to the backend at
-`http://localhost:5180`.
+`http://localhost:5180`. You can still run `./scripts/seed-demo-data.ps1 -BaseUrl http://localhost:5180/api`
+against this setup too.
+
+## Demo data
+
+[demo-data/](demo-data/) has two small, realistic multi-page PDFs — a student handbook and an
+employee onboarding guide — each written with concrete, citable facts (specific deadlines, policy
+numbers, named offices) so search/chat/summary results are actually meaningful rather than filler
+text. [scripts/seed-demo-data.ps1](scripts/seed-demo-data.ps1) registers a demo account and
+uploads both through the real `/api/documents` endpoint (not a database-direct insert, so it
+exercises the same validation and indexing pipeline a real user would). The script waits for
+indexing to finish and prints the demo account's credentials — a known, committed password that
+exists purely for this local demo seed and should never be treated as a real secret or reused
+anywhere else.
 
 ## Environment configuration
 
@@ -538,10 +645,13 @@ of chunks is fine.
 
 ## Known limitations
 
-This is Milestone 7 of 8. Scanned/image-only PDFs are detected and explicitly fail (OCR is not
-implemented). Section-by-section summaries from the original spec are not implemented — the PDF
-extraction pipeline has no heading/structure detection, so there's no real notion of "a section"
-yet (see the Milestone 6 notes above). The mock embedding and LLM providers have no real
+All 8 planned milestones are complete — the limitations below are permanent, deliberate trade-offs
+and acknowledged gaps, not things waiting on a future milestone. Scanned/image-only PDFs are
+detected and explicitly fail (OCR is not implemented). Section-by-section summaries from the
+original spec are not implemented — the PDF extraction pipeline has no heading/structure
+detection, so there's no real notion of "a section" yet (see the Milestone 6 notes above). The CI
+workflow has not actually run on a GitHub Actions runner, since this repository has no Git remote
+configured (see the Milestone 8 notes above). The mock embedding and LLM providers have no real
 semantic/language understanding (the mock LLM picks the most vocabulary-overlapping sentence from
 retrieved context — it cannot paraphrase, summarize across passages, or truly resolve a follow-up
 question the way a real model would); genuine semantic matching and fluent answers require
@@ -552,15 +662,19 @@ not safe to run as multiple API instances without adding a claim-locking scheme 
 the client discarding the cookie it's told to discard (standard for stateless cookie auth); there
 is no server-side session revocation list. Audit entries are a tagged log stream, not a queryable
 database table — fine for this project's scale, but not something you could easily run ad-hoc
-reports against without log-aggregation tooling. Treat this repository as a verified foundation with
-real auth, document management, indexing, search, grounded RAG chat, and document summaries/source
-viewing, not a complete product yet.
+reports against without log-aggregation tooling. This repository delivers its full originally
+planned scope — real auth, document management, indexing, search, grounded RAG chat, document
+summaries/source viewing, security hardening, and a deployable stack — verified at every step
+rather than claimed; it is not, and was never scoped to be, a feature-complete commercial product.
 
 ## Roadmap
 
-See the milestone list in [docs/architecture.md](docs/architecture.md) for the full plan:
-authentication & document library → PDF extraction/indexing → semantic search → RAG question
-answering → summaries & source viewer → security hardening → deployment & portfolio readiness.
+All 8 planned milestones are complete: foundation → authentication & document library → PDF
+extraction/indexing → semantic search → RAG question answering → summaries & source viewer →
+security hardening → deployment & portfolio readiness. See
+[docs/architecture.md](docs/architecture.md) for the full milestone list and the "why" behind the
+major design decisions made along the way, and [Known limitations](#known-limitations) above for
+what's deliberately still missing.
 
 ## Troubleshooting
 
@@ -595,8 +709,22 @@ answering → summaries & source viewer → security hardening → deployment & 
 - **The PDF in the source viewer doesn't scroll to the right page** — the `#page=n` jump relies on
   the *browser's own* built-in PDF viewer (Chrome/Edge support it; some other browsers or PDF
   plugins may not). This isn't something the app's own code controls.
+- **`docker compose up` can't log in / login redirects oddly** — confirm you're using the Docker
+  Compose quickstart's port (`http://localhost:8080`), not the local-dev frontend port (`5173`):
+  the auth cookie is scoped to whichever origin issued it, and the two setups are entirely
+  separate environments with separate databases/storage volumes.
+- **`docker compose up` fails to build, or the api container exits immediately** — run
+  `docker compose logs api` to see the actual startup error (commonly: Postgres not yet healthy —
+  compose's `depends_on: condition: service_healthy` should prevent this, but if you're low on
+  resources the healthcheck can still time out; `docker compose up -d --build` again usually
+  resolves it). `docker compose ps` shows the state of all three containers at a glance.
+- **`./scripts/seed-demo-data.ps1` fails to connect** — the script defaults to the Docker Compose
+  stack's address (`http://localhost:8080/api`); if the stack isn't running yet, start it first
+  (`docker compose up -d --build`). Against local `dotnet run`/`npm run dev` instead, pass
+  `-BaseUrl http://localhost:5180/api`.
 
 ## License and attribution
 
-License to be finalized before the project is made public. Third-party dependencies are listed in
+MIT — see [LICENSE](LICENSE). Replace the copyright line in that file with your own name before
+publishing this as your own portfolio project. Third-party dependencies are listed in
 [DocuMind.sln](DocuMind.sln)'s project files (`*.csproj`) and [frontend/package.json](frontend/package.json).

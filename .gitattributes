@@ -1,0 +1,9 @@
+# Without this, Git's autocrlf line-ending normalization would treat *.pdf as a text file and
+# rewrite LF bytes to CRLF wherever they happen to occur in the binary content — silently
+# corrupting the file (PDF's xref table depends on exact byte offsets). Mark every binary asset
+# explicitly as binary so Git never diffs or converts it.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary

@@ -1,0 +1,94 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2617 >>
+stream
+BT /F1 11 Tf 56 736 Td 15 TL
+() Tj T*
+(FIRST WEEK CHECKLIST) Tj T*
+() Tj T*
+(New employees should complete their I-9 and tax withholding forms through the HR portal) Tj T*
+(before their first day. IT will provision a laptop and company accounts once the signed) Tj T*
+(offer letter is received; equipment is typically ready for pickup at the front desk by 9) Tj T*
+(a.m. on the start date.) Tj T*
+() Tj T*
+(Every new hire is paired with an onboarding buddy from their team for the first thirty) Tj T*
+(days. The buddy is responsible for introducing the new hire to the team, scheduling an) Tj T*
+(informal welcome lunch within the first week, and answering day-to-day questions so) Tj T*
+(managers aren't the only point of contact.) Tj T*
+() Tj T*
+(All new employees must complete the mandatory workplace safety and code-of-conduct) Tj T*
+(training modules within the first five business days. Access to internal engineering) Tj T*
+(systems is automatically suspended for anyone who has not completed training within two) Tj T*
+(weeks of their start date.) Tj T*
+() Tj T*
+() Tj T*
+(BENEFITS OVERVIEW) Tj T*
+() Tj T*
+(Health, dental, and vision coverage begins on the first day of the month following thirty) Tj T*
+(days of employment. Enrollment elections must be submitted within that thirty-day window;) Tj T*
+(missing the window means waiting until the next annual open enrollment period in November.) Tj T*
+() Tj T*
+(Full-time employees accrue fifteen days of paid time off per year during their first three) Tj T*
+(years, increasing to twenty days starting in year four. Unused PTO up to five days may be) Tj T*
+(carried over into the following calendar year; any amount beyond that is forfeited.) Tj T*
+() Tj T*
+(The 401\(k\) plan matches fifty cents on the dollar up to six percent of salary, with) Tj T*
+(employer contributions vesting fully after two years of continuous employment. Employees) Tj T*
+(become eligible to enroll in the plan on the first payroll cycle after their start date.) Tj T*
+() Tj T*
+() Tj T*
+(IT AND SECURITY POLICIES) Tj T*
+() Tj T*
+(Company laptops must have disk encryption and the endpoint security agent active at all) Tj T*
+(times; IT runs an automated compliance check every Monday morning and will remotely lock) Tj T*
+(any device found out of compliance. Employees working from a personal device must use the) Tj T*
+(company VPN for any access to internal systems.) Tj T*
+() Tj T*
+(Multi-factor authentication is required for all company accounts, including email, source) Tj T*
+(control, and the HR portal. Lost or stolen devices must be reported to the IT security) Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 401 >>
+stream
+BT /F1 11 Tf 56 736 Td 15 TL
+(team within one hour of discovery so credentials can be revoked immediately.) Tj T*
+() Tj T*
+(Source code may not be copied to personal cloud storage, personal email, or any device not) Tj T*
+(issued or approved by the company. Violations are treated as a serious security incident) Tj T*
+(and are escalated directly to the engineering director and HR.) Tj T*
+() Tj T*
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000317 00000 n 
+0000002986 00000 n 
+0000003112 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R /Info << /Title (Acme Robotics Employee Onboarding Guide) >> >>
+startxref
+3564
+%%EOF

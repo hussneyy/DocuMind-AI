@@ -17,5 +17,50 @@ services:
       timeout: 5s
       retries: 10
 
+  api:
+    build:
+      context: .
+      dockerfile: src/DocuMind.Api/Dockerfile
+    container_name: documind-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Development, deliberately, even though this runs via Docker Compose: this stack has no
+      # real TLS termination in front of it, and the auth cookie's CookieSecurePolicy is
+      # Secure-only outside Development — Production here would silently break login over plain
+      # http://localhost. A real deployment with a TLS-terminating reverse proxy in front should
+      # set this to Production. (Swagger and the Development exception page being enabled as a
+      # side effect are a reasonable trade for a local/demo stack.)
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-documind};Username=${POSTGRES_USER:-documind};Password=${POSTGRES_PASSWORD:-documind_dev_local_only}
+      # No separate migration step in this stack — the API applies pending migrations itself at
+      # startup when this is set (see Program.cs). Local `dotnet run` development does not set
+      # this; it uses `dotnet-ef database update` explicitly instead (see README).
+      Database__MigrateOnStartup: "true"
+      Cors__AllowedOrigins__0: http://localhost:${FRONTEND_PORT:-8080}
+      Storage__Directory: /app/storage
+      Embedding__Provider: ${EMBEDDING_PROVIDER:-Mock}
+      Embedding__ApiKey: ${EMBEDDING_API_KEY:-}
+      Llm__Provider: ${LLM_PROVIDER:-Mock}
+      Llm__ApiKey: ${LLM_API_KEY:-}
+    volumes:
+      - documind-api-storage:/app/storage
+    ports:
+      - "${API_PORT:-5180}:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: documind-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+
 volumes:
   documind-postgres-data:
+  documind-api-storage:

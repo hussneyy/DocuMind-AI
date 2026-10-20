@@ -223,6 +223,36 @@ collection. The fix generalizes: a new environment-variable-configured factory s
 an existing collection whose fixture is known to force an eager host build, unless it's provably
 the only such factory in the assembly.
 
+## Implemented (Milestone 8 — deployment & portfolio readiness)
+
+- **The Docker Compose stack deliberately runs the API as `ASPNETCORE_ENVIRONMENT=Development`.**
+  This looks, at a glance, like forgetting to "harden" the deployed config — it's the opposite of
+  an oversight. `ConfigureApplicationCookie`'s `CookieSecurePolicy` is `SameAsRequest` only in
+  Development and `Secure`-only otherwise (see Milestone 1–3 notes above). This specific Compose
+  stack has no TLS termination anywhere in front of it — the frontend container serves plain HTTP
+  on `localhost:8080`. If the API ran as `Production` here, the auth cookie would be marked
+  `Secure`, and every browser would correctly refuse to send it back over the plain-HTTP
+  connection this stack actually uses — login would silently appear to succeed (the register/login
+  call itself works) and then immediately look logged-out on the very next request. A real
+  deployment that puts a TLS-terminating reverse proxy or load balancer in front of this same stack
+  should set `Production` instead, at which point `Secure` is correct and expected. This reasoning
+  lives in three places so it's hard to miss: an inline comment in `docker-compose.yml`, here, and
+  in [docs/architecture.md](architecture.md).
+- **The demo seed script's credentials are intentionally public, not a leaked secret.**
+  `scripts/seed-demo-data.ps1` registers `demo@documind.local` with a fixed, committed password so
+  anyone running the Docker Compose quickstart gets the same reproducible demo account. This is
+  safe specifically because it's scoped to a throwaway local/demo stack with no sensitive data —
+  the same pattern would be a real problem if this script, or anything like it, ever ran against a
+  shared or internet-reachable deployment. Worth stating explicitly rather than leaving a reader to
+  wonder whether a plaintext password in a committed script was an accident.
+- **`Database:MigrateOnStartup` only runs when the Docker Compose stack explicitly sets it.** Every
+  other way of running this app (`dotnet run` locally, the integration test factories) continues to
+  apply migrations the way it always did, unchanged by this milestone. The risk this setting
+  deliberately avoids introducing: automatic migration-on-startup makes most sense recognized as
+  dangerous in a real multi-instance production deployment (multiple instances racing to apply the
+  same migration concurrently) — not a concern for this single-instance demo stack, but worth
+  naming so the setting isn't copied into a different context without that caveat.
+
 ## A real UI bug: a successful click that silently navigated to the wrong page
 
 While driving the chat UI end-to-end in headless Chrome, clicking a conversation further down the
@@ -316,7 +346,7 @@ via its NuGet listing (owners `EliotJones`, `PdfPig`, `BobLd`; Apache-2.0; linke
 not proof it's the right package — check the owner, license, and version history before adding any
 new dependency, especially one that will parse untrusted user-uploaded files.
 
-## Not yet implemented (planned)
+## Permanent, known limitations (all 8 milestones are complete — nothing below is "later")
 
 Full prompt-injection mitigation for content embedded inside a user's own documents remains
 partial (system-prompt wording plus citation validation — see the Milestone 5/7 notes above —
@@ -324,4 +354,10 @@ rather than content sanitization or structural separation). There is currently n
 mechanism to revoke an issued auth cookie server-side before its natural expiry (standard
 limitation of stateless cookie auth without a token blacklist) — logout depends on the client
 honoring the cookie-clearing `Set-Cookie` response, which every real browser does but which a test
-or a misbehaving client could ignore.
+or a misbehaving client could ignore. Audit log entries are a tagged log stream, not a queryable
+database table (Milestone 7) — adequate at this project's scale, not something to run ad-hoc
+reports against without separate log-aggregation tooling. The Docker Compose stack has no TLS
+termination and runs as `ASPNETCORE_ENVIRONMENT=Development` as a deliberate consequence (see the
+Milestone 8 notes above) — it is a local/demo topology, not a hardened internet-facing deployment,
+and should not be exposed beyond localhost without putting a real TLS-terminating proxy in front
+of it and switching that setting to `Production`.
