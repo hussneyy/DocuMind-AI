@@ -66,6 +66,24 @@ public class MockLlmProviderTests
     }
 
     [Fact]
+    public async Task GenerateAnswerAsync_WithManyContextBlocks_CitesEveryOneOfThem()
+    {
+        // Summary generation can pass dozens of chunks (one per document section); the mock must
+        // not silently drop any of them the way an earlier, Q&A-only cap on cited blocks would have.
+        var context = Enumerable.Range(1, 12)
+            .Select(i => new LlmContextBlock(i, Guid.NewGuid(), Guid.NewGuid(), "doc.pdf", i, i, $"Section {i} covers topic {i}."))
+            .ToList();
+        var request = new LlmRequest("Summarize this document.", context, []);
+
+        var answer = await _provider.GenerateAnswerAsync(request, CancellationToken.None);
+
+        for (var i = 1; i <= 12; i++)
+        {
+            Assert.Contains($"[{i}]", answer);
+        }
+    }
+
+    [Fact]
     public void ModelId_ReflectsTheConfiguredModel()
     {
         Assert.Equal("mock-grounded-v1", _provider.ModelId);

@@ -4,6 +4,7 @@ import { Footer } from './components/layout/Footer'
 import { Navbar } from './components/layout/Navbar'
 import { ChatPage } from './pages/ChatPage'
 import { DocumentLibraryPage } from './pages/DocumentLibraryPage'
+import { DocumentViewerPage } from './pages/DocumentViewerPage'
 import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -22,6 +23,7 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route path="/documents" element={<DocumentLibraryPage />} />
+            <Route path="/documents/:id/view" element={<DocumentViewerPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/chat" element={<ChatPage />} />
           </Route>

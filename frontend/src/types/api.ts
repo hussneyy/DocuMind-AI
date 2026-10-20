@@ -93,3 +93,19 @@ export interface ConversationDetailDto {
   updatedAt: string
   messages: MessageDto[]
 }
+
+export const SummaryType = {
+  Short: 'Short',
+  Detailed: 'Detailed',
+  KeyPoints: 'KeyPoints',
+} as const
+
+export type SummaryType = (typeof SummaryType)[keyof typeof SummaryType]
+
+export interface SummaryDto {
+  summaryType: SummaryType
+  content: string
+  sourceChunkCount: number
+  generatedByModel: string
+  generatedAt: string
+}

@@ -1,5 +1,5 @@
 import { apiClient } from '../apiClient'
-import type { DocumentDto, DocumentProcessingStatus, PagedResult } from '../../types/api'
+import type { DocumentDto, DocumentProcessingStatus, PagedResult, SummaryDto, SummaryType } from '../../types/api'
 
 export interface ListDocumentsParams {
   page?: number
@@ -36,4 +36,15 @@ export async function retryDocument(id: string): Promise<DocumentDto> {
 export async function getDocument(id: string): Promise<DocumentDto> {
   const { data } = await apiClient.get<DocumentDto>(`/documents/${id}`)
   return data
+}
+
+export async function getSummary(id: string, type: SummaryType, regenerate = false): Promise<SummaryDto> {
+  const { data } = await apiClient.get<SummaryDto>(`/documents/${id}/summary`, { params: { type, regenerate } })
+  return data
+}
+
+/** Resolves the same base URL axios is configured with, for use as a plain <iframe>/<a> src (not an axios call). */
+export function getFileUrl(id: string): string {
+  const base = apiClient.defaults.baseURL ?? '/api'
+  return `${base.replace(/\/+$/, '')}/documents/${id}/file`
 }

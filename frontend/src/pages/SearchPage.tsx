@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { extractErrorMessages } from '../lib/apiClient'
@@ -182,6 +183,12 @@ export function SearchPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-slate-700">{highlightQuery(result.excerpt, query)}</p>
+                <Link
+                  to={`/documents/${result.documentId}/view?page=${result.pageStart}`}
+                  className="mt-2 inline-block text-xs font-medium text-brand-600 hover:text-brand-700"
+                >
+                  View source &rarr;
+                </Link>
               </li>
             ))}
           </ul>

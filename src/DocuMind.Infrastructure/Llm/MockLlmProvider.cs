@@ -9,14 +9,16 @@ namespace DocuMind.Infrastructure.Llm;
 /// retrieved context block that shares the most vocabulary with the question (the same "shared
 /// vocabulary implies relevance" heuristic as <see cref="Embeddings.MockEmbeddingProvider"/>) and
 /// composes an answer that cites each block it drew from with a [n] marker. It has no real
-/// language understanding — it cannot paraphrase, infer, or resolve follow-up questions the way a
-/// real model would — but it is enough to exercise the full grounded-answer-with-citations
-/// pipeline, including the "say so instead of guessing" behavior, without a paid API key.
+/// language understanding — it cannot paraphrase, infer, resolve follow-up questions, or actually
+/// obey an instruction's wording (e.g. "list as bullet points") the way a real model would — but
+/// it is enough to exercise the full grounded-answer-with-citations pipeline, including the "say
+/// so instead of guessing" behavior, without a paid API key. It uses every context block the
+/// caller provides (the caller — RagAnswerGenerator or SummaryService — is responsible for
+/// capping how many that is) rather than imposing its own limit, so it behaves the same whether
+/// asked a focused question with a handful of chunks or to summarize a whole document.
 /// </summary>
 public partial class MockLlmProvider(IOptions<LlmOptions> options) : ILlmProvider
 {
-    private const int MaxCitedBlocks = 3;
-
     public string ModelId => options.Value.Model;
 
     public Task<string> GenerateAnswerAsync(LlmRequest request, CancellationToken ct)
@@ -30,7 +32,7 @@ public partial class MockLlmProvider(IOptions<LlmOptions> options) : ILlmProvide
         var questionWords = WordsOf(request.Question);
         var sentences = new List<(int BlockIndex, string Sentence, int Overlap)>();
 
-        foreach (var block in request.Context.Take(MaxCitedBlocks))
+        foreach (var block in request.Context)
         {
             var best = BestMatchingSentence(block.Text, questionWords);
             if (best is not null)

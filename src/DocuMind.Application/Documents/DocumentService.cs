@@ -159,6 +159,15 @@ public class DocumentService(
             .ToList();
     }
 
+    public async Task<(Stream Content, string FileName, string ContentType)> OpenFileAsync(Guid ownerUserId, Guid documentId, CancellationToken ct)
+    {
+        var document = await repository.GetByIdAsync(ownerUserId, documentId, ct)
+            ?? throw new NotFoundException("Document not found.");
+
+        var stream = await fileStorage.OpenReadAsync(document.StorageKey, ct);
+        return (stream, document.OriginalFileName, document.ContentType);
+    }
+
     private static DocumentDto ToDto(Document document) => new(
         document.Id,
         document.OriginalFileName,

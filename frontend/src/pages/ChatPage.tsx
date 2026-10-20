@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { extractErrorMessages } from '../lib/apiClient'
@@ -175,6 +176,12 @@ export function ChatPage() {
                             </span>
                           </div>
                           <p className="mt-1 text-slate-500">{citation.excerpt}</p>
+                          <Link
+                            to={`/documents/${citation.documentId}/view?page=${citation.pageStart}`}
+                            className="mt-1 inline-block font-medium text-brand-600 hover:text-brand-700"
+                          >
+                            View source &rarr;
+                          </Link>
                         </li>
                       ))}
                     </ul>

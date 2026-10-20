@@ -145,6 +145,41 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                     b.ToTable("DocumentChunks", (string)null);
                 });
 
+            modelBuilder.Entity("DocuMind.Domain.Entities.DocumentSummary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LlmModel")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SourceChunkCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SummaryType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId", "SummaryType")
+                        .IsUnique();
+
+                    b.ToTable("DocumentSummaries", (string)null);
+                });
+
             modelBuilder.Entity("DocuMind.Domain.Entities.Message", b =>
                 {
                     b.Property<Guid>("Id")
@@ -429,6 +464,15 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("DocuMind.Domain.Entities.DocumentChunk", b =>
+                {
+                    b.HasOne("DocuMind.Domain.Entities.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DocuMind.Domain.Entities.DocumentSummary", b =>
                 {
                     b.HasOne("DocuMind.Domain.Entities.Document", null)
                         .WithMany()

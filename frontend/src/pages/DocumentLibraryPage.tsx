@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -251,6 +252,14 @@ export function DocumentLibraryPage() {
                     <td className="px-4 py-3 text-slate-600">{formatDate(doc.uploadedAt)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
+                        {doc.processingStatus === DocumentProcessingStatus.Indexed && (
+                          <Link
+                            to={`/documents/${doc.id}/view`}
+                            className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                          >
+                            View
+                          </Link>
+                        )}
                         {doc.processingStatus === DocumentProcessingStatus.Failed && (
                           <Button
                             variant="ghost"

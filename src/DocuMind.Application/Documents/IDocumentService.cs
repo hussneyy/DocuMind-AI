@@ -17,4 +17,7 @@ public interface IDocumentService
     Task<DocumentDto> RetryAsync(Guid ownerUserId, Guid documentId, CancellationToken ct);
 
     Task<IReadOnlyList<DocumentChunkDto>> ListChunksAsync(Guid ownerUserId, Guid documentId, CancellationToken ct);
+
+    /// <summary>Opens the original uploaded PDF for an owner-verified document, for inline viewing.</summary>
+    Task<(Stream Content, string FileName, string ContentType)> OpenFileAsync(Guid ownerUserId, Guid documentId, CancellationToken ct);
 }

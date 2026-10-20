@@ -1,5 +1,6 @@
 using DocuMind.Api.Extensions;
 using DocuMind.Application.Documents;
+using DocuMind.Application.Summaries;
 using DocuMind.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +10,7 @@ namespace DocuMind.Api.Controllers;
 [ApiController]
 [Route("api/documents")]
 [Authorize]
-public class DocumentsController(IDocumentService documentService) : ControllerBase
+public class DocumentsController(IDocumentService documentService, ISummaryService summaryService) : ControllerBase
 {
     [HttpPost]
     [RequestSizeLimit(30_000_000)]
@@ -80,5 +81,25 @@ public class DocumentsController(IDocumentService documentService) : ControllerB
     {
         var chunks = await documentService.ListChunksAsync(User.GetUserId(), id, ct);
         return Ok(chunks);
+    }
+
+    [HttpGet("{id:guid}/file")]
+    public async Task<IActionResult> GetFile(Guid id, CancellationToken ct)
+    {
+        var (content, fileName, contentType) = await documentService.OpenFileAsync(User.GetUserId(), id, ct);
+        return File(content, contentType, enableRangeProcessing: true);
+    }
+
+    [HttpGet("{id:guid}/summary")]
+    public async Task<IActionResult> GetSummary(
+        Guid id, [FromQuery] string type = "Short", [FromQuery] bool regenerate = false, CancellationToken ct = default)
+    {
+        if (!Enum.TryParse<SummaryType>(type, ignoreCase: true, out var summaryType))
+        {
+            return BadRequest(new { errors = new[] { $"Invalid summary type '{type}'. Use Short, Detailed, or KeyPoints." } });
+        }
+
+        var summary = await summaryService.GetOrGenerateAsync(User.GetUserId(), id, summaryType, regenerate, ct);
+        return Ok(summary);
     }
 }

@@ -107,6 +107,34 @@ for a summary.
   treat retrieved content as data rather than instructions, or scanning for injection patterns) is
   not yet implemented.
 
+## Implemented (Milestone 6)
+
+- **The source file endpoint is ownership-filtered through the same path as every other document
+  operation, not a new one.** `GET /api/documents/{id}/file` is backed by
+  `DocumentService.OpenFileAsync`, which calls `IDocumentRepository.GetByIdAsync(ownerUserId,
+  documentId, ...)` — the identical owner-filtered lookup `GetAsync`/`DeleteAsync`/etc. already use
+  — before ever touching `IFileStorage`. There is no separate "just stream the file" code path
+  that could accidentally skip the ownership check. Verified by
+  `GetFile_ForAnotherUsersDocument_ReturnsNotFound`, and by
+  `GetFile_ReturnsTheOriginalPdfBytesWithTheCorrectContentType` asserting the downloaded bytes are
+  byte-for-byte identical to what was uploaded — confirming this serves the real source file, not
+  some other derived or cached artifact that could silently drift from it.
+- **Summaries are grounded the same way chat answers are**, with one deliberate relaxation:
+  `SummaryService` requires the document to be `Indexed` (chunks must exist) before generating, but
+  — unlike `RagAnswerGenerator` — it does not apply a relevance/similarity floor, because there is
+  no query to be relevant *to*; "summarize this document" is grounded by construction once any
+  chunks exist. It still never fabricates from nothing: a document with zero chunks (shouldn't
+  happen once `Indexed`, but checked explicitly) returns a validation error rather than an empty
+  or invented summary.
+- **Summary caching could theoretically serve stale content after a re-index.** Documented as a
+  known limitation rather than silently accepted: retrying a document's indexing replaces its
+  chunks, but any previously generated `DocumentSummary` rows for it are left untouched. This is
+  not a security issue (ownership is unaffected either way) but is a correctness gap worth calling
+  out explicitly — a user who retries a failed document and then reopens an old cached summary
+  could see content generated from the document's prior (possibly different, if the PDF itself was
+  somehow replaced — not currently possible via this API) extraction. Fix, if needed later:
+  invalidate cached summaries in the same transaction that replaces a document's chunks.
+
 ## A real UI bug: a successful click that silently navigated to the wrong page
 
 While driving the chat UI end-to-end in headless Chrome, clicking a conversation further down the
@@ -202,11 +230,14 @@ new dependency, especially one that will parse untrusted user-uploaded files.
 
 ## Not yet implemented (planned)
 
-Rate limiting on the upload and chat-ask endpoints specifically (they share the general request
-pipeline but have no dedicated limiter the way auth does), audit logging, HTTPS enforcement in a
-real deployed environment, and full prompt-injection mitigation for content embedded inside a
-user's own documents (see the Milestone 5 note above) all arrive in later milestones. There is
-currently no mechanism to revoke an issued auth cookie server-side before its natural expiry
-(standard limitation of stateless cookie auth without a token blacklist) — logout depends on the
-client honoring the cookie-clearing `Set-Cookie` response, which every real browser does but which
-a test or a misbehaving client could ignore.
+Rate limiting on the upload, chat-ask, and summary-generation endpoints specifically (they share
+the general request pipeline but have no dedicated limiter the way auth does — summary generation
+in particular triggers a real LLM call and currently has no per-user throttle beyond whatever rate
+limit the configured provider itself enforces), audit logging, HTTPS enforcement in a real
+deployed environment, and full prompt-injection mitigation for content embedded inside a user's own
+documents (see the Milestone 5 note above) all arrive in later milestones. Cached summaries are not
+invalidated when a document is re-indexed (Milestone 6 note above). There is currently no
+mechanism to revoke an issued auth cookie server-side before its natural expiry (standard
+limitation of stateless cookie auth without a token blacklist) — logout depends on the client
+honoring the cookie-clearing `Set-Cookie` response, which every real browser does but which a test
+or a misbehaving client could ignore.

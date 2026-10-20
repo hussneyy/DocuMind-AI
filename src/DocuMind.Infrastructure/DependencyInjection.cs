@@ -3,6 +3,7 @@ using DocuMind.Application.Chat;
 using DocuMind.Application.Documents;
 using DocuMind.Application.Embeddings;
 using DocuMind.Application.Llm;
+using DocuMind.Application.Summaries;
 using DocuMind.Infrastructure.BackgroundJobs;
 using DocuMind.Infrastructure.Documents;
 using DocuMind.Infrastructure.Embeddings;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentRepository, DocumentRepository>();
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
         services.AddScoped<IConversationRepository, ConversationRepository>();
+        services.AddScoped<ISummaryRepository, SummaryRepository>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddScoped<IPdfInspector, PdfPigInspector>();
         services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();

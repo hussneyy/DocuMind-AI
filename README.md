@@ -3,7 +3,7 @@
 Intelligent document search and AI knowledge assistant. Upload PDFs, search them with natural
 language, and get grounded, citation-backed answers — never invented page numbers or quotes.
 
-> **Status: Milestone 5 of 8 — RAG question answering.** This is an actively developed
+> **Status: Milestone 6 of 8 — Summaries & source viewer.** This is an actively developed
 > portfolio project. See [Project status](#project-status) for exactly what is implemented and
 > verified today versus what is planned. Do not assume any feature exists beyond what's listed there.
 
@@ -301,11 +301,49 @@ together via dependency injection.
   the window itself never needs to scroll on this page at all. Documented in full in
   [docs/security.md](docs/security.md).
 
+### Implemented and verified (Milestone 6 — Summaries & source viewer)
+
+- **Document summaries, grounded in the document's own chunks, not invented.** `SummaryService`
+  feeds a sample of a document's chunks to the same `ILlmProvider` the chat pipeline uses, with an
+  instruction specific to each type — **Short** (2-3 sentences, evenly sampled across the whole
+  document so it isn't just "the introduction, shortened"), **Detailed** (multi-paragraph, up to
+  `Summary:DetailedMaxChunks` chunks in document order), and **Key Points** (a sampled bulleted
+  list). A document that hasn't finished indexing yet (nothing to ground a summary in) returns 400
+  rather than a summary assembled from nothing
+  ([SummaryService.cs](src/DocuMind.Application/Summaries/SummaryService.cs)). **Section-by-section
+  summaries from the original spec are explicitly not implemented** — the current PDF extraction
+  pipeline has no heading/structure detection, so there's no real notion of "a section" to
+  summarize; adding real heading detection first was out of scope for this milestone rather than
+  faking section boundaries.
+- **Summaries are cached, not regenerated on every view.** One row per `(DocumentId, SummaryType)`
+  — opening the same summary twice returns the same `GeneratedAt`/content without a second model
+  call; an explicit `regenerate=true` forces a fresh one. (Known limitation: re-indexing a document
+  via retry does not auto-invalidate its old cached summaries — a stale summary from before a
+  re-index stays cached until the user explicitly regenerates it.)
+- **A real, byte-verified source viewer.** `GET /api/documents/{id}/file` streams the *original
+  uploaded PDF* (not a re-render or extracted-text reconstruction) to an ownership-checked
+  `[Authorize]` endpoint, with range-processing enabled for faster loads; the frontend renders it
+  in an `<iframe>` using the browser's own native PDF viewer, jumping to a specific page via the
+  standard `#page=n` URL fragment. Citations from search results and chat answers both link
+  straight to the cited page. Verified by an integration test that uploads a PDF and asserts the
+  downloaded bytes are **byte-for-byte identical** to what was uploaded — this is the actual source
+  document, not a derived artifact — and that another user gets 404, never the file.
+- **Document detail page**: PDF viewer with Prev/Next page controls, alongside a summary panel
+  with Short/Detailed/Key Points tabs and a Regenerate button showing which model generated the
+  summary and from how many source passages. Reached from a document's **View** action, or
+  directly from a **View source** link under any search result or chat citation. Verified
+  end-to-end in real headless Chrome: upload → index → open the viewer → confirm the PDF loads at
+  page 1 → switch summary tabs → regenerate → follow a chat citation's "View source" link and
+  confirm it opens the right document at the right page.
+- The Mock LLM provider's internal cap on how many context blocks it would cite (originally 3,
+  sized for a focused chat answer) was removed — it now cites every block the caller passes,
+  which is what let it meaningfully exercise a 40-chunk Detailed summary.
+
 ### Not yet implemented (planned, later milestones)
 
-Document summaries, the page-level source viewer, OCR for scanned PDFs, and the full Docker
-Compose stack (API + frontend containers) all come in Milestones 6–8. Nothing above this line
-should be assumed to exist.
+OCR for scanned PDFs, section-by-section summaries (see above), and the full Docker Compose stack
+(API + frontend containers) come in Milestones 7–8. Nothing above this line should be assumed to
+exist.
 
 ## Prerequisites
 
@@ -377,17 +415,19 @@ provider, upload limits, storage directory). Copy it to `.env` for Docker Compos
 dotnet test
 ```
 
-`DocuMind.Tests` has 61 unit tests (file-validation rules, PDF signature checks, sentence-aware
+`DocuMind.Tests` has 69 unit tests (file-validation rules, PDF signature checks, sentence-aware
 chunking, mock-embedding determinism/similarity, RRF fusion logic, mock-LLM grounding/citation
-behavior, RAG citation-marker validation, chat conversation orchestration, paged-result math,
-claims parsing) — no I/O, run in well under a second. `DocuMind.IntegrationTests` has 34 tests
-that spin up the real API in-process (`WebApplicationFactory`, one shared instance across all test
-classes — see [docs/security.md](docs/security.md) for why) against a dedicated `documind_test`
-database on the same local Postgres container, covering register/login/logout, the full document
+behavior, RAG citation-marker validation, chat conversation orchestration, summary generation and
+caching/sampling logic, paged-result math, claims parsing) — no I/O, run in well under a second.
+`DocuMind.IntegrationTests` has 45 tests that spin up the real API in-process
+(`WebApplicationFactory`, one shared instance across all test classes — see
+[docs/security.md](docs/security.md) for why) against a dedicated `documind_test` database on the
+same local Postgres container, covering register/login/logout, the full document
 upload→list→get→delete lifecycle, cross-user isolation, CSRF rejection, invalid-PDF rejection,
 the full background-indexing pipeline, semantic/keyword/hybrid search with relevance thresholds
-and document scoping, and grounded chat answers with citation accuracy, conversation continuation,
-and cross-user isolation. The `documind_test` database must exist first — see
+and document scoping, grounded chat answers with citation accuracy and conversation continuation,
+and document summaries/file retrieval (caching, regeneration, byte-exact file content, ownership
+isolation). The `documind_test` database must exist first — see
 [Troubleshooting](#troubleshooting) if `dotnet test` fails with a connection error.
 
 ## Database and pgvector setup
@@ -435,12 +475,19 @@ of chunks is fine.
   or page the user didn't actually have indexed. Full prompt-injection mitigation (e.g. a
   malicious instruction embedded inside a PDF's text) is not yet addressed — see
   [docs/security.md](docs/security.md).
+- **The source file endpoint (`GET /api/documents/{id}/file`) is owner-filtered the same way
+  every other document endpoint is** — it opens the file via `IDocumentService.OpenFileAsync`,
+  which calls the same `IDocumentRepository.GetByIdAsync(ownerUserId, ...)` used everywhere else,
+  so there's no separate, easier-to-miss authorization path for "just serve the raw file."
+  Verified by an integration test asserting a second user gets 404, never the bytes.
 
 ## Known limitations
 
-This is Milestone 5 of 8. There are no document summaries and no page-level source viewer yet —
-chat answers cite a document and page range, but there's no in-app way to jump to and view that
-page. Scanned/image-only PDFs are detected and explicitly fail (OCR is not implemented). The mock
+This is Milestone 6 of 8. Scanned/image-only PDFs are detected and explicitly fail (OCR is not
+implemented). Section-by-section summaries from the original spec are not implemented — the PDF
+extraction pipeline has no heading/structure detection, so there's no real notion of "a section"
+yet (see the Milestone 6 notes above). Cached summaries are not automatically invalidated when a
+document is re-indexed via retry — a stale one persists until explicitly regenerated. The mock
 embedding and LLM providers have no real semantic/language understanding (the mock LLM picks the
 most vocabulary-overlapping sentence from retrieved context — it cannot paraphrase, summarize
 across passages, or truly resolve a follow-up question the way a real model would); genuine
@@ -450,7 +497,8 @@ queue — appropriate at this project's scale, but not safe to run as multiple A
 adding a claim-locking scheme (see [docs/architecture.md](docs/architecture.md)). Logout relies on
 the client discarding the cookie it's told to discard (standard for stateless cookie auth); there
 is no server-side session revocation list. Treat this repository as a verified foundation with
-real auth, document management, indexing, search, and grounded RAG chat, not a complete product yet.
+real auth, document management, indexing, search, grounded RAG chat, and document summaries/source
+viewing, not a complete product yet.
 
 ## Roadmap
 
@@ -485,6 +533,12 @@ answering → summaries & source viewer → security hardening → deployment & 
   [step 3](#3-apply-database-migrations)) against both `documind` and, if you're about to run
   integration tests, `documind_test` picks up new migrations automatically on the next test run
   (`DocuMindApiFactory.InitializeAsync` calls `Database.MigrateAsync()`).
+- **Summary request returns 400** — the document hasn't finished indexing yet; check its status
+  via `GET /api/documents/{id}` first. A summary needs chunks to ground itself in, the same
+  precondition chat and search have.
+- **The PDF in the source viewer doesn't scroll to the right page** — the `#page=n` jump relies on
+  the *browser's own* built-in PDF viewer (Chrome/Edge support it; some other browsers or PDF
+  plugins may not). This isn't something the app's own code controls.
 
 ## License and attribution
 

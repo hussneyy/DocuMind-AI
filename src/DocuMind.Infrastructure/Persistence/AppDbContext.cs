@@ -17,6 +17,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<MessageCitation> MessageCitations => Set<MessageCitation>();
+    public DbSet<DocumentSummary> DocumentSummaries => Set<DocumentSummary>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,6 +95,19 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             builder.HasOne<Message>()
                 .WithMany()
                 .HasForeignKey(c => c.MessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DocumentSummary>(builder =>
+        {
+            builder.ToTable("DocumentSummaries");
+            builder.HasKey(s => s.Id);
+            builder.Property(s => s.Content).IsRequired();
+            builder.Property(s => s.LlmModel).HasMaxLength(100).IsRequired();
+            builder.HasIndex(s => new { s.DocumentId, s.SummaryType }).IsUnique();
+            builder.HasOne<Document>()
+                .WithMany()
+                .HasForeignKey(s => s.DocumentId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

@@ -31,9 +31,13 @@ surface.
 | GET | `/api/chat/conversations` | cookie | The caller's own conversations, newest first. |
 | GET | `/api/chat/conversations/{id}` | cookie | Full message history for one conversation, each assistant message with its citations. 404 if missing or not owned by the caller. |
 | DELETE | `/api/chat/conversations/{id}` | cookie | Deletes a conversation and all its messages/citations. 404 if not owned. |
+| GET | `/api/documents/{id}/file` | cookie | Streams the original uploaded PDF bytes (not a reconstruction), for inline viewing. Supports range requests. 404 if not owned. |
+| GET | `/api/documents/{id}/summary` | cookie | Returns a cached summary, generating one first if none exists yet. Query params: `type` (`Short`\|`Detailed`\|`KeyPoints`, default `Short`), `regenerate` (bool, default `false`, forces a fresh generation even if cached). 400 if the document hasn't finished indexing. |
 
-Every `/api/documents/*` and `/api/chat/*` request requires the `X-Requested-With` header (see
-[security.md](security.md)) in addition to the auth cookie.
+Every unsafe-method (`POST`/`PUT`/`PATCH`/`DELETE`) request to `/api/documents/*` and `/api/chat/*`
+requires the `X-Requested-With` header (see [security.md](security.md)) in addition to the auth
+cookie — `GET` requests only need the cookie, since the CSRF middleware only guards state-changing
+methods.
 
 ### Example: register then upload
 
@@ -165,7 +169,43 @@ cannot fabricate an answer. Every `[n]` marker in `content` corresponds to one e
 `citations`, in order; a marker the model might emit for a passage that was never actually
 retrieved is dropped before the response is built, never resolved to the wrong source.
 
+### Example: document summary
+
+```http
+GET /api/documents/f13275e3-3d7e-4a7d-8ca6-3192cfd91d0b/summary?type=Short
+Cookie: documind.auth=...
+```
+
+```json
+{
+  "summaryType": "Short",
+  "content": "Based on your documents: The exam registration deadline is March fifteenth this year [1]...",
+  "sourceChunkCount": 6,
+  "generatedByModel": "mock-grounded-v1",
+  "generatedAt": "2026-10-20T12:00:00Z"
+}
+```
+
+The result is cached per `(documentId, type)` — calling this again without `regenerate=true`
+returns the same `generatedAt`/`content` without a new model call. `type=Detailed` summarizes up
+to `Summary:DetailedMaxChunks` chunks in document order; `type=Short`/`type=KeyPoints` instead
+sample a handful of chunks evenly spaced across the whole document, so a short summary isn't
+biased toward just the introduction. 400 if the document's `processingStatus` isn't `Indexed` yet.
+
+### Example: source file
+
+```http
+GET /api/documents/f13275e3-3d7e-4a7d-8ca6-3192cfd91d0b/file
+Cookie: documind.auth=...
+```
+
+Returns the original uploaded PDF bytes with `Content-Type: application/pdf` — not a
+reconstruction from extracted text. The frontend loads this directly in an `<iframe>` and appends
+`#page=n` to jump to a specific page via the browser's native PDF viewer.
+
 ## Planned endpoints
 
-Summaries and a page-level source viewer from the project spec will be added here as they are
-actually implemented — not before.
+No new endpoints are planned for Milestones 7-8 (security/quality hardening and deployment
+readiness) — remaining gaps are feature-internal limitations, not missing routes. See each
+milestone's "Known limitations" in the root [README.md](../README.md), notably that scanned/
+image-only PDFs have no OCR path at all, not even a partial one.

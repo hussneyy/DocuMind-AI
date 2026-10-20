@@ -77,6 +77,29 @@ rules testable without a database or AI provider, and keeps controllers free of 
   `RagAnswerGenerator` returns a fixed "not enough information" answer without a model call at
   all — the same grounding principle already applied at the search layer (Milestone 4), now
   applied one step earlier, before generation rather than after.
+- **Summaries reuse `ILlmProvider` with a summarization-flavored `LlmRequest`, not a separate
+  summarization provider interface.** A summary is mechanically "answer this instruction using
+  this context" — the same shape as a chat question — so `SummaryService` builds an `LlmRequest`
+  whose `Question` field is actually an instruction ("Write a concise 2-3 sentence summary...")
+  and whose context is a sample of the document's own chunks. This avoids a parallel provider
+  abstraction for what is, from the provider's point of view, the same operation.
+- **Summary chunk selection differs by type, not just the instruction wording.** Detailed takes the
+  first `Summary:DetailedMaxChunks` chunks in document order (bounds prompt size for very large
+  documents — a real map-reduce summarization strategy for documents that exceed this is not yet
+  implemented). Short and Key Points instead *sample* a small number of chunks evenly spaced across
+  the whole document (`ordered[i * count/sampleSize]` for `i` in `0..sampleSize`), so a short
+  summary still reflects the document's middle and end, not just its introduction — a naive
+  "first N chunks" sample would systematically bias short summaries toward whatever topic the
+  document happens to open with.
+- **The source viewer serves the original PDF bytes directly** (`GET /api/documents/{id}/file`,
+  streamed via the same `IFileStorage`/`IDocumentRepository` ownership path as every other document
+  endpoint) **rather than reconstructing a page view from extracted text.** Reconstructing from
+  `DocumentChunk` text would be lossy (chunking is sentence-based and can merge or split content
+  across page boundaries) and wouldn't let a user visually verify a citation against the actual
+  source. The frontend renders it in an `<iframe>` and jumps to a page via the browser's native PDF
+  viewer's `#page=n` URL fragment, rather than shipping a PDF.js-based custom viewer — the simplest
+  thing that actually works in Chromium-based browsers, at the cost of not controlling the viewer's
+  own UI or working identically in every browser.
 
 ## Milestone roadmap
 
