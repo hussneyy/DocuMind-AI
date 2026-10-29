@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { KeyRound } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
@@ -34,47 +35,53 @@ export function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center px-4 py-16">
-      <h1 className="text-2xl">Log in to DocuMind AI</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Don't have an account?{' '}
-        <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
-          Create one
-        </Link>
-      </p>
+    <main className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-brand-50 to-white px-4 py-16">
+      <div className="bg-dot-grid pointer-events-none absolute inset-0" aria-hidden="true" />
+      <div className="animate-fade-in-up relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-600/30">
+          <KeyRound className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 text-2xl">Log in to DocuMind AI</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Don't have an account?{' '}
+          <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
+            Create one
+          </Link>
+        </p>
 
-      <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col gap-4">
-        {errors.length > 0 && (
-          <Alert variant="error">
-            <ul className="list-inside list-disc">
-              {errors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          </Alert>
-        )}
+        <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col gap-4">
+          {errors.length > 0 && (
+            <Alert variant="error">
+              <ul className="list-inside list-disc">
+                {errors.map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
+              </ul>
+            </Alert>
+          )}
 
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <TextField
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <TextField
+            label="Email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-        <Button type="submit" size="lg" disabled={isSubmitting} className="mt-2">
-          {isSubmitting ? 'Logging in...' : 'Log in'}
-        </Button>
-      </form>
+          <Button type="submit" size="lg" isLoading={isSubmitting} className="mt-2">
+            {isSubmitting ? 'Logging in...' : 'Log in'}
+          </Button>
+        </form>
+      </div>
     </main>
   )
 }

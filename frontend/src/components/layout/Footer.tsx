@@ -4,7 +4,14 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <p className="text-sm font-semibold text-slate-900">DocuMind AI</p>
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand-600 text-white">
+                <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+                  <path d="M7 4h7l4 4v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </span>
+              DocuMind AI
+            </p>
             <p className="mt-1 max-w-sm text-sm text-slate-500">
               An open-source portfolio project demonstrating retrieval-augmented document search
               and question answering. Not affiliated with any commercial product.
@@ -18,7 +25,7 @@ export function Footer() {
             <span className="cursor-default text-slate-500" title="See the project README once published">
               Source code
             </span>
-            <a href="#privacy" className="hover:text-slate-900">
+            <a href="#privacy" className="transition-colors hover:text-slate-900">
               Privacy &amp; source verification
             </a>
           </div>

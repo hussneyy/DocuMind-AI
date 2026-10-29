@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Eye, FileText, FolderOpen, RotateCw, Search, Trash2 } from 'lucide-react'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -132,7 +133,12 @@ export function DocumentLibraryPage() {
 
       <div className="mt-6">
         <FileDropzone onFileSelected={handleFileSelected} disabled={isUploading} />
-        {isUploading && <p className="mt-2 text-sm text-slate-500">Uploading...</p>}
+        {isUploading && (
+          <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
+            Uploading...
+          </p>
+        )}
         {uploadErrors.length > 0 && (
           <div className="mt-3">
             <Alert variant="error">
@@ -147,17 +153,20 @@ export function DocumentLibraryPage() {
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <input
-          type="search"
-          placeholder="Search by file name..."
-          value={search}
-          onChange={(e) => {
-            setPage(1)
-            setSearch(e.target.value)
-          }}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 sm:max-w-xs"
-          aria-label="Search documents by file name"
-        />
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="Search by file name..."
+            value={search}
+            onChange={(e) => {
+              setPage(1)
+              setSearch(e.target.value)
+            }}
+            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            aria-label="Search documents by file name"
+          />
+        </div>
 
         <div className="flex gap-2">
           <select
@@ -166,7 +175,7 @@ export function DocumentLibraryPage() {
               setPage(1)
               setStatusFilter(e.target.value === '' ? '' : (Number(e.target.value) as DocumentProcessingStatus))
             }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
             aria-label="Filter by processing status"
           >
             {STATUS_FILTER_OPTIONS.map((option) => (
@@ -183,7 +192,7 @@ export function DocumentLibraryPage() {
               setSortBy(field as 'uploadedAt' | 'name')
               setSortDesc(desc === 'true')
             }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
             aria-label="Sort documents"
           >
             <option value="uploadedAt:true">Newest first</option>
@@ -215,15 +224,18 @@ export function DocumentLibraryPage() {
         )}
 
         {!loadError && !isLoading && documents.length === 0 && (
-          <div className="mt-6 rounded-xl border border-dashed border-slate-300 py-12 text-center">
-            <p className="text-slate-600">
+          <div className="animate-fade-in mt-6 flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <FolderOpen className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <p className="mt-3 text-slate-600">
               {search || statusFilter !== '' ? 'No documents match your filters.' : 'No documents yet. Upload your first PDF above.'}
             </p>
           </div>
         )}
 
         {!loadError && !isLoading && documents.length > 0 && (
-          <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200">
+          <div className="animate-fade-in mt-2 overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                 <tr>
@@ -239,8 +251,13 @@ export function DocumentLibraryPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {documents.map((doc) => (
-                  <tr key={doc.id}>
-                    <td className="px-4 py-3 font-medium text-slate-900">{doc.originalFileName}</td>
+                  <tr key={doc.id} className="transition-colors hover:bg-slate-50/80">
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                        <span className="truncate">{doc.originalFileName}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <DocumentStatusBadge status={doc.processingStatus} />
                       {doc.processingStatus === DocumentProcessingStatus.Failed && doc.processingError && (
@@ -251,12 +268,13 @@ export function DocumentLibraryPage() {
                     <td className="px-4 py-3 text-slate-600">{formatFileSize(doc.fileSizeBytes)}</td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(doc.uploadedAt)}</td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         {doc.processingStatus === DocumentProcessingStatus.Indexed && (
                           <Link
                             to={`/documents/${doc.id}/view`}
-                            className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
                           >
+                            <Eye className="h-4 w-4" aria-hidden="true" />
                             View
                           </Link>
                         )}
@@ -266,11 +284,18 @@ export function DocumentLibraryPage() {
                             size="md"
                             disabled={retryingId === doc.id}
                             onClick={() => handleRetry(doc)}
+                            leftIcon={<RotateCw className={`h-4 w-4 ${retryingId === doc.id ? 'animate-spin' : ''}`} aria-hidden="true" />}
                           >
                             {retryingId === doc.id ? 'Retrying...' : 'Retry'}
                           </Button>
                         )}
-                        <Button variant="ghost" size="md" onClick={() => setDeleteTarget(doc)}>
+                        <Button
+                          variant="ghost"
+                          size="md"
+                          onClick={() => setDeleteTarget(doc)}
+                          className="!text-slate-500 hover:!bg-red-50 hover:!text-red-600"
+                          leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+                        >
                           Delete
                         </Button>
                       </div>
@@ -284,13 +309,25 @@ export function DocumentLibraryPage() {
 
         {!loadError && !isLoading && totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between">
-            <Button variant="secondary" size="md" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              variant="secondary"
+              size="md"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              leftIcon={<ChevronLeft className="h-4 w-4" aria-hidden="true" />}
+            >
               Previous
             </Button>
             <span className="text-sm text-slate-500">
               Page {page} of {totalPages}
             </span>
-            <Button variant="secondary" size="md" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            <Button
+              variant="secondary"
+              size="md"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              rightIcon={<ChevronRight className="h-4 w-4" aria-hidden="true" />}
+            >
               Next
             </Button>
           </div>

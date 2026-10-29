@@ -13,21 +13,105 @@
   --color-brand-900: #1e3a8a;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --animate-fade-in: fade-in 0.5s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.6s ease-out both;
+  --animate-scale-in: scale-in 0.18s ease-out both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 :root {
   color-scheme: light;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply bg-white text-slate-700 antialiased;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   @apply text-slate-900 font-semibold tracking-tight;
 }
 
 :focus-visible {
   outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+/* Thin, subtle scrollbar for the chat/document panes — Firefox + WebKit. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-300);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-slate-400);
+}
+
+/* A soft, decorative dot-grid used behind hero/empty-state sections. Purely cosmetic — layered
+   under content with a mask so it fades out at the edges rather than tiling harshly. */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, var(--color-slate-300) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 0%, black 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 0%, black 40%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

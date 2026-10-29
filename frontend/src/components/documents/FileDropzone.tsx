@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
+import { UploadCloud } from 'lucide-react'
 
 interface FileDropzoneProps {
   onFileSelected: (file: File) => void
@@ -27,20 +28,18 @@ export function FileDropzone({ onFileSelected, disabled }: FileDropzoneProps) {
       }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
-      className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
-        isDragOver ? 'border-brand-500 bg-brand-50' : 'border-slate-300 bg-slate-50'
+      className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-all duration-150 ${
+        isDragOver ? 'scale-[1.01] border-brand-500 bg-brand-50' : 'border-slate-300 bg-slate-50 hover:border-slate-400'
       } ${disabled ? 'opacity-60' : ''}`}
     >
-      <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-slate-400" aria-hidden="true">
-        <path
-          d="M12 16V4m0 0 4 4m-4-4-4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <p className="text-sm text-slate-600">
+      <span
+        className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
+          isDragOver ? 'bg-brand-100 text-brand-600' : 'bg-slate-100 text-slate-400'
+        }`}
+      >
+        <UploadCloud className="h-6 w-6" aria-hidden="true" />
+      </span>
+      <p className="mt-1 text-sm text-slate-600">
         Drag and drop a PDF here, or{' '}
         <label htmlFor={inputId} className="cursor-pointer font-medium text-brand-600 hover:text-brand-700">
           browse

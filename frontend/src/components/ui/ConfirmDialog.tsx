@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import { Button } from './Button'
 
 interface ConfirmDialogProps {
@@ -36,7 +37,7 @@ export function ConfirmDialog({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm">
       <div
         ref={dialogRef}
         role="alertdialog"
@@ -44,14 +45,21 @@ export function ConfirmDialog({
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-description"
         tabIndex={-1}
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg focus:outline-none"
+        className="animate-scale-in w-full max-w-sm rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-900/5 focus:outline-none"
       >
-        <h2 id="confirm-dialog-title" className="text-lg font-semibold text-slate-900">
-          {title}
-        </h2>
-        <p id="confirm-dialog-description" className="mt-2 text-sm text-slate-600">
-          {description}
-        </p>
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+            <AlertTriangle className="h-5 w-5 text-red-600" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 id="confirm-dialog-title" className="text-lg font-semibold text-slate-900">
+              {title}
+            </h2>
+            <p id="confirm-dialog-description" className="mt-1 text-sm text-slate-600">
+              {description}
+            </p>
+          </div>
+        </div>
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="secondary" onClick={onCancel} disabled={isBusy}>
             Cancel
@@ -59,8 +67,8 @@ export function ConfirmDialog({
           <Button
             variant="primary"
             onClick={onConfirm}
-            disabled={isBusy}
-            className="!bg-red-600 hover:!bg-red-700 focus-visible:!ring-red-600"
+            isLoading={isBusy}
+            className="!bg-red-600 !shadow-red-600/20 hover:!bg-red-700 focus-visible:!ring-red-600"
           >
             {isBusy ? 'Deleting...' : confirmLabel}
           </Button>

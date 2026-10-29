@@ -2,6 +2,7 @@ import axios from 'axios'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, FileSearch, SearchX, SearchIcon } from 'lucide-react'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { extractErrorMessages } from '../lib/apiClient'
@@ -75,15 +76,18 @@ export function SearchPage() {
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. What is the exam registration deadline?"
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
-            aria-label="Search query"
-          />
-          <Button type="submit" size="lg" disabled={isSearching || !query.trim()}>
+          <div className="relative w-full">
+            <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="e.g. What is the exam registration deadline?"
+              className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+              aria-label="Search query"
+            />
+          </div>
+          <Button type="submit" size="lg" isLoading={isSearching} disabled={!query.trim()}>
             {isSearching ? 'Searching...' : 'Search'}
           </Button>
         </div>
@@ -95,9 +99,9 @@ export function SearchPage() {
               type="button"
               title={option.description}
               onClick={() => setMode(option.value)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                 mode === option.value
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/20'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -165,8 +169,11 @@ export function SearchPage() {
         )}
 
         {!errors.length && !isSearching && hasSearched && results !== null && results.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center">
-            <p className="text-slate-600">
+          <div className="animate-fade-in flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <SearchX className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <p className="mt-3 text-slate-600">
               No reliable answer found in your documents for this query. Try rephrasing, or switch search modes.
             </p>
           </div>
@@ -174,8 +181,12 @@ export function SearchPage() {
 
         {!errors.length && !isSearching && results && results.length > 0 && (
           <ul className="flex flex-col gap-3">
-            {results.map((result) => (
-              <li key={result.chunkId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            {results.map((result, i) => (
+              <li
+                key={result.chunkId}
+                className="animate-fade-in-up rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-slate-900">{result.documentFileName}</span>
                   <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
@@ -185,9 +196,10 @@ export function SearchPage() {
                 <p className="mt-2 text-sm text-slate-700">{highlightQuery(result.excerpt, query)}</p>
                 <Link
                   to={`/documents/${result.documentId}/view?page=${result.pageStart}`}
-                  className="mt-2 inline-block text-xs font-medium text-brand-600 hover:text-brand-700"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 transition-colors hover:text-brand-700"
                 >
-                  View source &rarr;
+                  View source
+                  <ArrowRight className="h-3 w-3" aria-hidden="true" />
                 </Link>
               </li>
             ))}
@@ -195,8 +207,11 @@ export function SearchPage() {
         )}
 
         {!hasSearched && (
-          <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center">
-            <p className="text-slate-600">Enter a question or search term above to get started.</p>
+          <div className="flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+              <FileSearch className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <p className="mt-3 text-slate-600">Enter a question or search term above to get started.</p>
           </div>
         )}
       </div>
