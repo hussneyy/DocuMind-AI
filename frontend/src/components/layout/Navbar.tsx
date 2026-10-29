@@ -1,8 +1,9 @@
-import { FileText, LogOut, MessageSquare, Search } from 'lucide-react'
+import { FileText, MessageSquare, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Button } from '../ui/Button'
+import { ProfileMenu } from './ProfileMenu'
 
 const AUTHED_LINKS = [
   { to: '/documents', label: 'My Documents', icon: FileText },
@@ -86,10 +87,7 @@ export function Navbar() {
                   </NavLink>
                 ))}
               </div>
-              <span className="hidden text-sm text-slate-500 lg:inline">{user.displayName}</span>
-              <Button variant="ghost" size="md" onClick={handleLogout} leftIcon={<LogOut className="h-4 w-4" aria-hidden="true" />}>
-                <span className="hidden sm:inline">Log out</span>
-              </Button>
+              <ProfileMenu user={user} onLogout={handleLogout} />
             </>
           ) : (
             <>
