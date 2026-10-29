@@ -98,11 +98,7 @@ export function LandingPage() {
 
         <div className="relative mx-auto grid max-w-6xl gap-16 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:px-8">
           <div className="animate-fade-in-up">
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-brand-200 ring-1 ring-white/10">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-              Portfolio project &middot; retrieval-augmented document QA
-            </p>
-            <h1 className="mt-6 text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.4rem]">
+            <h1 className="text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.4rem]">
               Ask your documents anything.{' '}
               <span className="bg-gradient-to-r from-brand-400 to-sky-300 bg-clip-text text-transparent">
                 Get answers you can verify.

@@ -52,6 +52,11 @@ export function Navbar() {
             </svg>
           </span>
           DocuMind AI
+          {!user && (
+            <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 sm:inline">
+              Portfolio project
+            </span>
+          )}
         </Link>
 
         {!user && (
