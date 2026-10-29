@@ -56,15 +56,20 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
-  @apply bg-white text-slate-700 antialiased;
-}
+/* In Tailwind v4's cascade layers, unlayered CSS beats layered utilities regardless of
+   specificity — so these base element defaults have to live in @layer base themselves, or any
+   className="text-white" (etc.) on an h1-h4 or body would silently lose to the rule below. */
+@layer base {
+  body {
+    @apply bg-white text-slate-700 antialiased;
+  }
 
-h1,
-h2,
-h3,
-h4 {
-  @apply text-slate-900 font-semibold tracking-tight;
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-slate-900 font-semibold tracking-tight;
+  }
 }
 
 :focus-visible {
@@ -101,6 +106,15 @@ h4 {
    under content with a mask so it fades out at the edges rather than tiling harshly. */
 .bg-dot-grid {
   background-image: radial-gradient(circle, var(--color-slate-300) 1px, transparent 1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 0%, black 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 0%, black 40%, transparent 100%);
+}
+
+/* Same dot-grid, lightened for use over a dark (slate-950) background instead of inverting
+   colors with a CSS filter, which would tint the dots an odd off-color rather than a clean gray. */
+.bg-dot-grid-dark {
+  background-image: radial-gradient(circle, rgb(255 255 255 / 0.15) 1px, transparent 1px);
   background-size: 24px 24px;
   -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 0%, black 40%, transparent 100%);
   mask-image: radial-gradient(ellipse 60% 60% at 50% 0%, black 40%, transparent 100%);

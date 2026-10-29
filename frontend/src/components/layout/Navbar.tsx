@@ -1,4 +1,5 @@
 import { FileText, LogOut, MessageSquare, Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Button } from '../ui/Button'
@@ -12,6 +13,16 @@ const AUTHED_LINKS = [
 export function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  useEffect(() => {
+    function handleScroll() {
+      setIsScrolled(window.scrollY > 8)
+    }
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   async function handleLogout() {
     await logout()
@@ -19,7 +30,11 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header
+      className={`sticky top-0 z-40 border-b backdrop-blur transition-all duration-200 ${
+        isScrolled ? 'border-slate-200 bg-white/95 shadow-sm' : 'border-transparent bg-white/80'
+      }`}
+    >
       <nav
         aria-label="Primary"
         className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8"
