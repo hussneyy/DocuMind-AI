@@ -70,7 +70,7 @@ export function SearchPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-2xl">Search your documents</h1>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
         Ask a question or search for a term across your indexed documents.
       </p>
 
@@ -83,7 +83,7 @@ export function SearchPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="e.g. What is the exam registration deadline?"
-              className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+              className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:border-slate-500"
               aria-label="Search query"
             />
           </div>
@@ -102,19 +102,19 @@ export function SearchPage() {
               className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                 mode === option.value
                   ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/20'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
               }`}
             >
               {option.label}
             </button>
           ))}
 
-          <span className="mx-1 h-4 w-px bg-slate-200" aria-hidden="true" />
+          <span className="mx-1 h-4 w-px bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
 
           <button
             type="button"
             onClick={() => setShowScopePicker((v) => !v)}
-            className="text-xs font-medium text-brand-600 hover:text-brand-700"
+            className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
           >
             {selectedDocumentIds.size === 0
               ? 'Searching all documents'
@@ -125,19 +125,19 @@ export function SearchPage() {
         </div>
 
         {showScopePicker && (
-          <div className="rounded-lg border border-slate-200 p-3">
+          <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
             {documents.length === 0 ? (
-              <p className="text-sm text-slate-500">No indexed documents yet.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No indexed documents yet.</p>
             ) : (
               <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto">
                 {documents.map((doc) => (
                   <li key={doc.id}>
-                    <label className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
+                    <label className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
                       <input
                         type="checkbox"
                         checked={selectedDocumentIds.has(doc.id)}
                         onChange={() => toggleDocument(doc.id)}
-                        className="rounded border-slate-300"
+                        className="rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800"
                       />
                       {doc.originalFileName}
                     </label>
@@ -163,17 +163,17 @@ export function SearchPage() {
         {!errors.length && isSearching && (
           <ul className="flex flex-col gap-3" aria-busy="true" aria-live="polite">
             {[...Array(3)].map((_, i) => (
-              <li key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
+              <li key={i} className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
             ))}
           </ul>
         )}
 
         {!errors.length && !isSearching && hasSearched && results !== null && results.length === 0 && (
-          <div className="animate-fade-in flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+          <div className="animate-fade-in flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center dark:border-slate-700">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
               <SearchX className="h-6 w-6" aria-hidden="true" />
             </span>
-            <p className="mt-3 text-slate-600">
+            <p className="mt-3 text-slate-600 dark:text-slate-400">
               No reliable answer found in your documents for this query. Try rephrasing, or switch search modes.
             </p>
           </div>
@@ -184,19 +184,19 @@ export function SearchPage() {
             {results.map((result, i) => (
               <li
                 key={result.chunkId}
-                className="animate-fade-in-up rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                className="animate-fade-in-up rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:shadow-black/20"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-slate-900">{result.documentFileName}</span>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                  <span className="font-medium text-slate-900 dark:text-white">{result.documentFileName}</span>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     {result.pageStart === result.pageEnd ? `Page ${result.pageStart}` : `Pages ${result.pageStart}-${result.pageEnd}`}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-slate-700">{highlightQuery(result.excerpt, query)}</p>
+                <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{highlightQuery(result.excerpt, query)}</p>
                 <Link
                   to={`/documents/${result.documentId}/view?page=${result.pageStart}`}
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 transition-colors hover:text-brand-700"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                 >
                   View source
                   <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -207,11 +207,11 @@ export function SearchPage() {
         )}
 
         {!hasSearched && (
-          <div className="flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+          <div className="flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center dark:border-slate-700">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
               <FileSearch className="h-6 w-6" aria-hidden="true" />
             </span>
-            <p className="mt-3 text-slate-600">Enter a question or search term above to get started.</p>
+            <p className="mt-3 text-slate-600 dark:text-slate-400">Enter a question or search term above to get started.</p>
           </div>
         )}
       </div>
@@ -228,7 +228,7 @@ function highlightQuery(text: string, query: string) {
 
   return parts.map((part, i) =>
     words.some((w) => w.toLowerCase() === part.toLowerCase()) ? (
-      <mark key={i} className="rounded bg-amber-100 px-0.5 text-inherit">
+      <mark key={i} className="rounded bg-amber-100 px-0.5 text-inherit dark:bg-amber-400/30">
         {part}
       </mark>
     ) : (

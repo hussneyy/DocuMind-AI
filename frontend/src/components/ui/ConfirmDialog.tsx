@@ -45,17 +45,17 @@ export function ConfirmDialog({
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-description"
         tabIndex={-1}
-        className="animate-scale-in w-full max-w-sm rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-900/5 focus:outline-none"
+        className="animate-scale-in w-full max-w-sm rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-900/5 focus:outline-none dark:bg-slate-800 dark:ring-white/10"
       >
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
-            <AlertTriangle className="h-5 w-5 text-red-600" aria-hidden="true" />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/15">
+            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
           </span>
           <div>
             <h2 id="confirm-dialog-title" className="text-lg font-semibold text-slate-900">
               {title}
             </h2>
-            <p id="confirm-dialog-description" className="mt-1 text-sm text-slate-600">
+            <p id="confirm-dialog-description" className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               {description}
             </p>
           </div>

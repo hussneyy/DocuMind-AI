@@ -29,23 +29,25 @@ export function FileDropzone({ onFileSelected, disabled }: FileDropzoneProps) {
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
       className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-all duration-150 ${
-        isDragOver ? 'scale-[1.01] border-brand-500 bg-brand-50' : 'border-slate-300 bg-slate-50 hover:border-slate-400'
+        isDragOver
+          ? 'scale-[1.01] border-brand-500 bg-brand-50 dark:bg-brand-500/10'
+          : 'border-slate-300 bg-slate-50 hover:border-slate-400 dark:border-slate-600 dark:bg-slate-800/50 dark:hover:border-slate-500'
       } ${disabled ? 'opacity-60' : ''}`}
     >
       <span
         className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-          isDragOver ? 'bg-brand-100 text-brand-600' : 'bg-slate-100 text-slate-400'
+          isDragOver ? 'bg-brand-100 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400' : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
         }`}
       >
         <UploadCloud className="h-6 w-6" aria-hidden="true" />
       </span>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
         Drag and drop a PDF here, or{' '}
-        <label htmlFor={inputId} className="cursor-pointer font-medium text-brand-600 hover:text-brand-700">
+        <label htmlFor={inputId} className="cursor-pointer font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
           browse
         </label>
       </p>
-      <p className="text-xs text-slate-500">PDF files only, up to 25 MB</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">PDF files only, up to 25 MB</p>
       <input
         ref={inputRef}
         id={inputId}

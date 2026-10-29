@@ -107,7 +107,7 @@ export function ChatPage() {
 
   return (
     <main className="mx-auto flex h-[calc(100vh-4rem)] max-w-6xl overflow-hidden px-4 sm:px-6 lg:px-8">
-      <aside className="hidden min-h-0 w-64 shrink-0 flex-col border-r border-slate-200 py-6 pr-4 sm:flex">
+      <aside className="hidden min-h-0 w-64 shrink-0 flex-col border-r border-slate-200 py-6 pr-4 dark:border-slate-700 sm:flex">
         <Button
           variant="secondary"
           size="md"
@@ -124,7 +124,9 @@ export function ChatPage() {
                 type="button"
                 onClick={() => openConversation(conversation.id)}
                 className={`flex-1 truncate rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  conversation.id === activeConversationId ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100'
+                  conversation.id === activeConversationId
+                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
                 }`}
               >
                 {conversation.title}
@@ -133,7 +135,7 @@ export function ChatPage() {
                 type="button"
                 aria-label={`Delete conversation "${conversation.title}"`}
                 onClick={() => handleDelete(conversation.id)}
-                className="shrink-0 rounded p-1.5 text-slate-500 opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+                className="shrink-0 rounded p-1.5 text-slate-500 opacity-0 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
@@ -141,10 +143,10 @@ export function ChatPage() {
           ))}
           {conversations.length === 0 && (
             <li className="mt-6 flex flex-col items-center px-3 py-2 text-center">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
                 <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
               </span>
-              <p className="mt-2 text-sm text-slate-500">No conversations yet.</p>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No conversations yet.</p>
             </li>
           )}
         </ul>
@@ -155,7 +157,7 @@ export function ChatPage() {
           <Sparkles className="h-5 w-5 text-brand-600" aria-hidden="true" />
           Ask DocuMind AI
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Ask a question across your indexed documents. Answers are grounded in your own files and cite the source.
         </p>
 
@@ -171,25 +173,25 @@ export function ChatPage() {
           )}
 
           {isLoadingConversation && (
-            <p className="flex items-center gap-2 text-sm text-slate-500">
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
+            <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600 dark:border-slate-600" />
               Loading conversation...
             </p>
           )}
 
           {!isLoadingConversation && messages.length === 0 && (
-            <div className="animate-fade-in flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
+            <div className="animate-fade-in flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center dark:border-slate-700">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500 dark:bg-brand-500/15 dark:text-brand-400">
                 <Bot className="h-6 w-6" aria-hidden="true" />
               </span>
-              <p className="mt-3 text-slate-600">Ask something like &ldquo;What is the exam registration deadline?&rdquo;</p>
+              <p className="mt-3 text-slate-600 dark:text-slate-400">Ask something like &ldquo;What is the exam registration deadline?&rdquo;</p>
               <div className="mt-4 flex flex-wrap justify-center gap-2 px-4">
                 {SUGGESTED_QUESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
                     onClick={() => submitQuestion(suggestion)}
-                    className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                    className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 dark:border-slate-700 dark:text-slate-400 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"
                   >
                     {suggestion}
                   </button>
@@ -206,7 +208,7 @@ export function ChatPage() {
                 style={{ animationDelay: `${Math.min(i, 4) * 40}ms` }}
               >
                 {message.role === 'assistant' && (
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
                     <Bot className="h-4 w-4" aria-hidden="true" />
                   </span>
                 )}
@@ -214,27 +216,27 @@ export function ChatPage() {
                   className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
                     message.role === 'user'
                       ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/20'
-                      : 'border border-slate-200 bg-white text-slate-800 shadow-sm'
+                      : 'border border-slate-200 bg-white text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{message.content}</p>
 
                   {message.citations.length > 0 && (
-                    <ul className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
+                    <ul className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
                       {message.citations.map((citation, i) => (
-                        <li key={citation.chunkId} className="rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
-                          <div className="flex items-center justify-between gap-2 font-medium text-slate-700">
+                        <li key={citation.chunkId} className="rounded-lg bg-slate-50 p-2 text-xs text-slate-600 dark:bg-slate-900/60 dark:text-slate-400">
+                          <div className="flex items-center justify-between gap-2 font-medium text-slate-700 dark:text-slate-300">
                             <span>
                               [{i + 1}] {citation.documentFileName}
                             </span>
-                            <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5">
+                            <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 dark:bg-slate-700">
                               {citation.pageStart === citation.pageEnd ? `p.${citation.pageStart}` : `p.${citation.pageStart}-${citation.pageEnd}`}
                             </span>
                           </div>
-                          <p className="mt-1 text-slate-500">{citation.excerpt}</p>
+                          <p className="mt-1 text-slate-500 dark:text-slate-400">{citation.excerpt}</p>
                           <Link
                             to={`/documents/${citation.documentId}/view?page=${citation.pageStart}`}
-                            className="mt-1 inline-flex items-center gap-1 font-medium text-brand-600 transition-colors hover:text-brand-700"
+                            className="mt-1 inline-flex items-center gap-1 font-medium text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                           >
                             View source
                             <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -245,7 +247,7 @@ export function ChatPage() {
                   )}
                 </div>
                 {message.role === 'user' && (
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
                     <User className="h-4 w-4" aria-hidden="true" />
                   </span>
                 )}
@@ -255,27 +257,27 @@ export function ChatPage() {
 
           {isAsking && (
             <div className="animate-fade-in mt-4 flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
                 <Bot className="h-4 w-4" aria-hidden="true" />
               </span>
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <span className="flex gap-1">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s] dark:bg-slate-500" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s] dark:bg-slate-500" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 dark:bg-slate-500" />
                 </span>
               </div>
             </div>
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
+        <form onSubmit={handleSubmit} className="mt-4 flex gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
           <input
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask a question about your documents..."
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:border-slate-500"
             aria-label="Question"
           />
           <Button

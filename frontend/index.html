@@ -12,6 +12,22 @@
     />
     <title>DocuMind AI — Intelligent Document Search &amp; AI Knowledge Assistant</title>
     <meta name="description" content="Upload PDFs, search them with natural language, and get grounded AI answers with source citations." />
+    <script>
+      // Applied synchronously, before the first paint, so there's no flash of the wrong theme
+      // while React mounts and ThemeContext runs its own effect. Mirrors exactly what
+      // ThemeContext reads/writes (the "documind-theme" localStorage key) — keep both in sync.
+      (function () {
+        try {
+          var stored = localStorage.getItem('documind-theme')
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          if (stored === 'dark' || (!stored && prefersDark)) {
+            document.documentElement.classList.add('dark')
+          }
+        } catch (e) {
+          /* localStorage can throw in a locked-down context (e.g. some private-browsing modes) — default to light. */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

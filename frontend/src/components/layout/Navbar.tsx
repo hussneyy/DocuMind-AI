@@ -4,6 +4,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Button } from '../ui/Button'
 import { ProfileMenu } from './ProfileMenu'
+import { ThemeToggle } from './ThemeToggle'
 
 const AUTHED_LINKS = [
   { to: '/documents', label: 'My Documents', icon: FileText },
@@ -32,15 +33,17 @@ export function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-40 border-b backdrop-blur transition-all duration-200 ${
-        isScrolled ? 'border-slate-200 bg-white/95 shadow-sm' : 'border-transparent bg-white/80'
+      className={`sticky top-0 z-40 border-b backdrop-blur transition-all duration-200 dark:bg-slate-900/90 ${
+        isScrolled
+          ? 'border-slate-200 bg-white/95 shadow-sm dark:border-slate-800'
+          : 'border-transparent bg-white/80'
       }`}
     >
       <nav
         aria-label="Primary"
         className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8"
       >
-        <Link to="/" className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <Link to="/" className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm shadow-brand-600/30">
             <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
               <path
@@ -53,7 +56,7 @@ export function Navbar() {
           </span>
           DocuMind AI
           {!user && (
-            <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 sm:inline">
+            <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400 sm:inline">
               Portfolio project
             </span>
           )}
@@ -61,19 +64,19 @@ export function Navbar() {
 
         {!user && (
           <div className="hidden items-center gap-8 md:flex">
-            <a href="/#features" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+            <a href="/#features" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
               Features
             </a>
-            <a href="/#how-it-works" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+            <a href="/#how-it-works" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
               How it works
             </a>
-            <a href="/#privacy" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900">
+            <a href="/#privacy" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
               Privacy
             </a>
           </div>
         )}
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           {user ? (
             <>
               <div className="hidden items-center gap-1 sm:flex">
@@ -83,7 +86,9 @@ export function Navbar() {
                     to={to}
                     className={({ isActive }) =>
                       `flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        isActive
+                          ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'
+                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
                       }`
                     }
                   >
@@ -92,10 +97,12 @@ export function Navbar() {
                   </NavLink>
                 ))}
               </div>
+              <ThemeToggle />
               <ProfileMenu user={user} onLogout={handleLogout} />
             </>
           ) : (
             <>
+              <ThemeToggle />
               <Button to="/login" variant="ghost" size="md">
                 Log in
               </Button>

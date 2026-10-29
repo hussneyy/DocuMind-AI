@@ -128,14 +128,14 @@ export function DocumentLibraryPage() {
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl">My Documents</h1>
-        <p className="text-sm text-slate-600">Upload PDFs to build your searchable library.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Upload PDFs to build your searchable library.</p>
       </div>
 
       <div className="mt-6">
         <FileDropzone onFileSelected={handleFileSelected} disabled={isUploading} />
         {isUploading && (
-          <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
+          <p className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600 dark:border-slate-600" />
             Uploading...
           </p>
         )}
@@ -163,7 +163,7 @@ export function DocumentLibraryPage() {
               setPage(1)
               setSearch(e.target.value)
             }}
-            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:border-slate-500"
             aria-label="Search documents by file name"
           />
         </div>
@@ -175,7 +175,7 @@ export function DocumentLibraryPage() {
               setPage(1)
               setStatusFilter(e.target.value === '' ? '' : (Number(e.target.value) as DocumentProcessingStatus))
             }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:border-slate-500"
             aria-label="Filter by processing status"
           >
             {STATUS_FILTER_OPTIONS.map((option) => (
@@ -192,7 +192,7 @@ export function DocumentLibraryPage() {
               setSortBy(field as 'uploadedAt' | 'name')
               setSortDesc(desc === 'true')
             }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:border-slate-500"
             aria-label="Sort documents"
           >
             <option value="uploadedAt:true">Newest first</option>
@@ -218,26 +218,26 @@ export function DocumentLibraryPage() {
         {!loadError && isLoading && (
           <ul className="mt-2 flex flex-col gap-2" aria-busy="true" aria-live="polite">
             {[...Array(3)].map((_, i) => (
-              <li key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+              <li key={i} className="h-16 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
             ))}
           </ul>
         )}
 
         {!loadError && !isLoading && documents.length === 0 && (
-          <div className="animate-fade-in mt-6 flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+          <div className="animate-fade-in mt-6 flex flex-col items-center rounded-xl border border-dashed border-slate-300 py-14 text-center dark:border-slate-700">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
               <FolderOpen className="h-6 w-6" aria-hidden="true" />
             </span>
-            <p className="mt-3 text-slate-600">
+            <p className="mt-3 text-slate-600 dark:text-slate-400">
               {search || statusFilter !== '' ? 'No documents match your filters.' : 'No documents yet. Upload your first PDF above.'}
             </p>
           </div>
         )}
 
         {!loadError && !isLoading && documents.length > 0 && (
-          <div className="animate-fade-in mt-2 overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="animate-fade-in mt-2 overflow-x-auto rounded-xl border border-slate-200 shadow-sm dark:border-slate-700">
+            <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+              <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                   <th scope="col" className="px-4 py-3">Name</th>
                   <th scope="col" className="px-4 py-3">Status</th>
@@ -249,30 +249,30 @@ export function DocumentLibraryPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
                 {documents.map((doc) => (
-                  <tr key={doc.id} className="transition-colors hover:bg-slate-50/80">
-                    <td className="px-4 py-3 font-medium text-slate-900">
+                  <tr key={doc.id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/60">
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                        <FileText className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" aria-hidden="true" />
                         <span className="truncate">{doc.originalFileName}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <DocumentStatusBadge status={doc.processingStatus} />
                       {doc.processingStatus === DocumentProcessingStatus.Failed && doc.processingError && (
-                        <p className="mt-1 text-xs text-red-600">{doc.processingError}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{doc.processingError}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{doc.pageCount ?? '—'}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatFileSize(doc.fileSizeBytes)}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatDate(doc.uploadedAt)}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{doc.pageCount ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatFileSize(doc.fileSizeBytes)}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatDate(doc.uploadedAt)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         {doc.processingStatus === DocumentProcessingStatus.Indexed && (
                           <Link
                             to={`/documents/${doc.id}/view`}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                           >
                             <Eye className="h-4 w-4" aria-hidden="true" />
                             View
@@ -293,7 +293,7 @@ export function DocumentLibraryPage() {
                           variant="ghost"
                           size="md"
                           onClick={() => setDeleteTarget(doc)}
-                          className="!text-slate-500 hover:!bg-red-50 hover:!text-red-600"
+                          className="!text-slate-500 hover:!bg-red-50 hover:!text-red-600 dark:!text-slate-400 dark:hover:!bg-red-500/10 dark:hover:!text-red-400"
                           leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
                         >
                           Delete
@@ -318,7 +318,7 @@ export function DocumentLibraryPage() {
             >
               Previous
             </Button>
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               Page {page} of {totalPages}
             </span>
             <Button

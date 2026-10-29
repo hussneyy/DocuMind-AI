@@ -191,7 +191,7 @@ export function LandingPage() {
         <div className="mx-auto max-w-2xl text-center">
           <SectionLabel>How it works</SectionLabel>
           <h2 className="mt-3 text-3xl">Three steps from PDF to answer</h2>
-          <p className="mt-3 text-slate-600">
+          <p className="mt-3 text-slate-600 dark:text-slate-400">
             No manual tagging, no reading hundreds of pages. DocuMind handles extraction, indexing,
             and retrieval for you.
           </p>
@@ -201,27 +201,27 @@ export function LandingPage() {
           {STEPS.map((step, i) => (
             <div
               key={step.number}
-              className="animate-fade-in-up group relative overflow-hidden rounded-2xl border border-slate-200 p-6 transition-all duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg hover:shadow-slate-200/60"
+              className="animate-fade-in-up group relative overflow-hidden rounded-2xl border border-slate-200 p-6 transition-all duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg hover:shadow-slate-200/60 dark:border-slate-700 dark:hover:border-brand-500/40 dark:hover:shadow-black/30"
               style={{ animationDelay: `${i * 100}ms` }}
             >
               <div
-                className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-100 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-70"
+                className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-100 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-70 dark:bg-brand-500/20"
                 aria-hidden="true"
               />
               <div className="relative flex items-center justify-between">
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white dark:bg-brand-500/15 dark:text-brand-400">
                   <step.icon className="h-5 w-5" aria-hidden="true" />
                 </span>
-                <span className="text-sm font-semibold text-slate-500">{step.number}</span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{step.number}</span>
               </div>
               <h3 className="relative mt-4 text-xl">{step.title}</h3>
-              <p className="relative mt-2 text-sm text-slate-600">{step.description}</p>
+              <p className="relative mt-2 text-sm text-slate-600 dark:text-slate-400">{step.description}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="features" className="bg-slate-50 py-20">
+      <section id="features" className="bg-slate-50 py-20 dark:bg-slate-900">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <SectionLabel>Features</SectionLabel>
@@ -232,18 +232,18 @@ export function LandingPage() {
             {FEATURES.map((feature, i) => (
               <div
                 key={feature.title}
-                className="animate-fade-in-up group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60 hover:ring-brand-200"
+                className="animate-fade-in-up group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60 hover:ring-brand-200 dark:bg-slate-800 dark:ring-slate-700 dark:hover:shadow-black/30 dark:hover:ring-brand-500/40"
                 style={{ animationDelay: `${i * 75}ms` }}
               >
                 <div
-                  className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-100 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-70"
+                  className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-100 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-70 dark:bg-brand-500/20"
                   aria-hidden="true"
                 />
-                <span className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white">
+                <span className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white dark:bg-brand-500/15 dark:text-brand-400">
                   <feature.icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <h3 className="relative mt-4 text-lg">{feature.title}</h3>
-                <p className="relative mt-2 text-sm text-slate-600">{feature.description}</p>
+                <p className="relative mt-2 text-sm text-slate-600 dark:text-slate-400">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -255,25 +255,25 @@ export function LandingPage() {
           <div>
             <SectionLabel>Privacy &amp; trust</SectionLabel>
             <h2 className="mt-3 text-3xl">Grounded answers. Verifiable sources. Private by default.</h2>
-            <p className="mt-4 text-slate-600">
+            <p className="mt-4 text-slate-600 dark:text-slate-400">
               DocuMind only answers from the documents you upload, and only you can access your own
               documents and conversations.
             </p>
             <ul className="mt-6 flex flex-col gap-3">
               {TRUST_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-3 text-sm text-slate-700">
-                  <CheckCircle2 className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-600" aria-hidden="true" />
+                <li key={point} className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+                  <CheckCircle2 className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-600 dark:text-brand-400" aria-hidden="true" />
                   {point}
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-brand-50 to-white p-10 text-center shadow-sm">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-brand-50 to-white p-10 text-center shadow-sm dark:border-slate-700 dark:from-slate-800 dark:to-slate-900">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30">
               <ShieldCheck className="h-7 w-7" aria-hidden="true" />
             </span>
-            <p className="mt-5 text-sm text-slate-600">
+            <p className="mt-5 text-sm text-slate-600 dark:text-slate-400">
               If the available documents don't contain a reliable answer, DocuMind tells you so
               instead of guessing &mdash; the same standard applied to every search, every citation,
               every summary.
@@ -282,7 +282,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="border-t border-slate-200 bg-slate-950">
+      <section className="border-t border-slate-200 bg-slate-950 dark:border-slate-800">
         <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 lg:px-8">
           <h2 className="text-2xl text-white sm:text-3xl">Ready to see it work on your own documents?</h2>
           <p className="mx-auto mt-3 max-w-xl text-slate-400">
