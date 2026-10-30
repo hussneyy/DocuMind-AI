@@ -15,6 +15,11 @@ export const DocumentProcessingStatus = {
 
 export type DocumentProcessingStatus = (typeof DocumentProcessingStatus)[keyof typeof DocumentProcessingStatus]
 
+export interface TagDto {
+  id: string
+  name: string
+}
+
 export interface DocumentDto {
   id: string
   originalFileName: string
@@ -25,6 +30,7 @@ export interface DocumentDto {
   processingError: string | null
   uploadedAt: string
   indexedAt: string | null
+  tags: TagDto[]
 }
 
 export interface PagedResult<T> {

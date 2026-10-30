@@ -13,5 +13,6 @@ public record DocumentListQuery(
     int PageSize = 20,
     string? FileNameSearch = null,
     DocumentProcessingStatus? StatusFilter = null,
+    Guid? TagId = null,
     DocumentSortField SortBy = DocumentSortField.UploadedAt,
     bool SortDescending = true);

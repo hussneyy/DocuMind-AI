@@ -10,4 +10,6 @@ public enum AuditEventType
     DocumentDeleted,
     ConversationDeleted,
     DisplayNameChanged,
+    TagCreated,
+    TagDeleted,
 }

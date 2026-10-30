@@ -34,6 +34,7 @@ public class DocumentsController(IDocumentService documentService, ISummaryServi
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] DocumentProcessingStatus? status = null,
+        [FromQuery] Guid? tagId = null,
         [FromQuery] string sortBy = "uploadedAt",
         [FromQuery] bool sortDesc = true,
         CancellationToken ct = default)
@@ -43,6 +44,7 @@ public class DocumentsController(IDocumentService documentService, ISummaryServi
             pageSize,
             search,
             status,
+            tagId,
             string.Equals(sortBy, "name", StringComparison.OrdinalIgnoreCase) ? DocumentSortField.Name : DocumentSortField.UploadedAt,
             sortDesc);
 
@@ -104,5 +106,19 @@ public class DocumentsController(IDocumentService documentService, ISummaryServi
 
         var summary = await summaryService.GetOrGenerateAsync(User.GetUserId(), id, summaryType, regenerate, ct);
         return Ok(summary);
+    }
+
+    [HttpPost("{id:guid}/tags/{tagId:guid}")]
+    public async Task<IActionResult> AttachTag(Guid id, Guid tagId, CancellationToken ct)
+    {
+        var dto = await documentService.AttachTagAsync(User.GetUserId(), id, tagId, ct);
+        return Ok(dto);
+    }
+
+    [HttpDelete("{id:guid}/tags/{tagId:guid}")]
+    public async Task<IActionResult> DetachTag(Guid id, Guid tagId, CancellationToken ct)
+    {
+        var dto = await documentService.DetachTagAsync(User.GetUserId(), id, tagId, ct);
+        return Ok(dto);
     }
 }

@@ -6,6 +6,7 @@ export interface ListDocumentsParams {
   pageSize?: number
   search?: string
   status?: DocumentProcessingStatus
+  tagId?: string
   sortBy?: 'uploadedAt' | 'name'
   sortDesc?: boolean
 }
@@ -47,4 +48,14 @@ export async function getSummary(id: string, type: SummaryType, regenerate = fal
 export function getFileUrl(id: string): string {
   const base = apiClient.defaults.baseURL ?? '/api'
   return `${base.replace(/\/+$/, '')}/documents/${id}/file`
+}
+
+export async function attachTag(documentId: string, tagId: string): Promise<DocumentDto> {
+  const { data } = await apiClient.post<DocumentDto>(`/documents/${documentId}/tags/${tagId}`)
+  return data
+}
+
+export async function detachTag(documentId: string, tagId: string): Promise<DocumentDto> {
+  const { data } = await apiClient.delete<DocumentDto>(`/documents/${documentId}/tags/${tagId}`)
+  return data
 }

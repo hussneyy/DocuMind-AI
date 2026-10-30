@@ -180,6 +180,21 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                     b.ToTable("DocumentSummaries", (string)null);
                 });
 
+            modelBuilder.Entity("DocuMind.Domain.Entities.DocumentTag", b =>
+                {
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DocumentId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("DocumentTags", (string)null);
+                });
+
             modelBuilder.Entity("DocuMind.Domain.Entities.Message", b =>
                 {
                     b.Property<Guid>("Id")
@@ -241,6 +256,33 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                     b.HasIndex("MessageId");
 
                     b.ToTable("MessageCitations", (string)null);
+                });
+
+            modelBuilder.Entity("DocuMind.Domain.Entities.Tag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("OwnerUserId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("DocuMind.Infrastructure.Identity.ApplicationUser", b =>
@@ -481,6 +523,21 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DocuMind.Domain.Entities.DocumentTag", b =>
+                {
+                    b.HasOne("DocuMind.Domain.Entities.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DocuMind.Domain.Entities.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DocuMind.Domain.Entities.Message", b =>
                 {
                     b.HasOne("DocuMind.Domain.Entities.Conversation", null)
@@ -495,6 +552,15 @@ namespace DocuMind.Infrastructure.Persistence.Migrations
                     b.HasOne("DocuMind.Domain.Entities.Message", null)
                         .WithMany()
                         .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DocuMind.Domain.Entities.Tag", b =>
+                {
+                    b.HasOne("DocuMind.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

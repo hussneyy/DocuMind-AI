@@ -18,6 +18,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<MessageCitation> MessageCitations => Set<MessageCitation>();
     public DbSet<DocumentSummary> DocumentSummaries => Set<DocumentSummary>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<DocumentTag> DocumentTags => Set<DocumentTag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -108,6 +110,33 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             builder.HasOne<Document>()
                 .WithMany()
                 .HasForeignKey(s => s.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Tag>(builder =>
+        {
+            builder.ToTable("Tags");
+            builder.HasKey(t => t.Id);
+            builder.Property(t => t.Name).HasMaxLength(50).IsRequired();
+            builder.HasIndex(t => t.OwnerUserId);
+            builder.HasIndex(t => new { t.OwnerUserId, t.Name }).IsUnique();
+            builder.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(t => t.OwnerUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DocumentTag>(builder =>
+        {
+            builder.ToTable("DocumentTags");
+            builder.HasKey(dt => new { dt.DocumentId, dt.TagId });
+            builder.HasOne<Document>()
+                .WithMany()
+                .HasForeignKey(dt => dt.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne<Tag>()
+                .WithMany()
+                .HasForeignKey(dt => dt.TagId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

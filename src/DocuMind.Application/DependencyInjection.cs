@@ -4,6 +4,7 @@ using DocuMind.Application.Embeddings;
 using DocuMind.Application.Llm;
 using DocuMind.Application.Search;
 using DocuMind.Application.Summaries;
+using DocuMind.Application.Tags;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IRagAnswerGenerator, RagAnswerGenerator>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<ISummaryService, SummaryService>();
+        services.AddScoped<ITagService, TagService>();
 
         return services;
     }

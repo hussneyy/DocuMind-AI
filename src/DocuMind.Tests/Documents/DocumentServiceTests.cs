@@ -2,6 +2,7 @@ using DocuMind.Application.Auditing;
 using DocuMind.Application.Common.Exceptions;
 using DocuMind.Application.Documents;
 using DocuMind.Application.Search;
+using DocuMind.Application.Tags;
 using DocuMind.Domain.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -76,6 +77,7 @@ public class DocumentServiceTests
     private static DocumentService BuildService(FakeDocumentRepository repository, FakeAuditLogger auditLogger, PdfInspectionResult? inspection) =>
         new(repository,
             new FakeDocumentChunkRepository(),
+            new FakeTagRepository(),
             new FakeFileStorage(),
             new FakePdfInspector(inspection),
             Options.Create(new UploadOptions()),
@@ -147,6 +149,30 @@ public class DocumentServiceTests
             throw new NotSupportedException();
 
         public void Remove(Document document) => Removed.Add(document);
+
+        public Task SaveChangesAsync(CancellationToken ct) => Task.CompletedTask;
+    }
+
+    private sealed class FakeTagRepository : ITagRepository
+    {
+        public Task AddAsync(Tag tag, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<Tag?> GetByIdAsync(Guid ownerUserId, Guid tagId, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<Tag?> GetByNameAsync(Guid ownerUserId, string name, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<Tag>> ListAsync(Guid ownerUserId, CancellationToken ct) => throw new NotSupportedException();
+
+        public void Remove(Tag tag) => throw new NotSupportedException();
+
+        public Task<bool> IsAttachedAsync(Guid documentId, Guid tagId, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task AttachAsync(Guid documentId, Guid tagId, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task DetachAsync(Guid documentId, Guid tagId, CancellationToken ct) => throw new NotSupportedException();
+
+        public Task<IReadOnlyDictionary<Guid, IReadOnlyList<TagDto>>> GetTagsForDocumentsAsync(IReadOnlyList<Guid> documentIds, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, IReadOnlyList<TagDto>>>(new Dictionary<Guid, IReadOnlyList<TagDto>>());
 
         public Task SaveChangesAsync(CancellationToken ct) => Task.CompletedTask;
     }

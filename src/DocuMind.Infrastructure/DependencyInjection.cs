@@ -5,6 +5,7 @@ using DocuMind.Application.Documents;
 using DocuMind.Application.Embeddings;
 using DocuMind.Application.Llm;
 using DocuMind.Application.Summaries;
+using DocuMind.Application.Tags;
 using DocuMind.Infrastructure.Auditing;
 using DocuMind.Infrastructure.BackgroundJobs;
 using DocuMind.Infrastructure.Documents;
@@ -51,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<ISummaryRepository, SummaryRepository>();
+        services.AddScoped<ITagRepository, TagRepository>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddScoped<IPdfInspector, PdfPigInspector>();
         services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();

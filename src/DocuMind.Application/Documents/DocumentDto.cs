@@ -1,3 +1,4 @@
+using DocuMind.Application.Tags;
 using DocuMind.Domain.Enums;
 
 namespace DocuMind.Application.Documents;
@@ -11,4 +12,5 @@ public record DocumentDto(
     DocumentProcessingStatus ProcessingStatus,
     string? ProcessingError,
     DateTimeOffset UploadedAt,
-    DateTimeOffset? IndexedAt);
+    DateTimeOffset? IndexedAt,
+    IReadOnlyList<TagDto> Tags);

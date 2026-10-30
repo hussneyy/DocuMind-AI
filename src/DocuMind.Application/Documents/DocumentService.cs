@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using DocuMind.Application.Auditing;
 using DocuMind.Application.Common;
 using DocuMind.Application.Common.Exceptions;
+using DocuMind.Application.Tags;
 using DocuMind.Domain.Entities;
 using DocuMind.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ namespace DocuMind.Application.Documents;
 public class DocumentService(
     IDocumentRepository repository,
     IDocumentChunkRepository chunkRepository,
+    ITagRepository tagRepository,
     IFileStorage fileStorage,
     IPdfInspector pdfInspector,
     IOptions<UploadOptions> options,
@@ -99,15 +101,16 @@ public class DocumentService(
             document.Id, ownerUserId, document.PageCount);
         auditLogger.Log(AuditEventType.DocumentUploaded, ownerUserId, $"documentId={document.Id} fileName={document.OriginalFileName}");
 
-        return ToDto(document);
+        return ToDto(document, []);
     }
 
     public async Task<PagedResult<DocumentDto>> ListAsync(Guid ownerUserId, DocumentListQuery query, CancellationToken ct)
     {
         var (items, total) = await repository.ListAsync(ownerUserId, query, ct);
+        var tagsByDocument = await tagRepository.GetTagsForDocumentsAsync(items.Select(d => d.Id).ToList(), ct);
         return new PagedResult<DocumentDto>
         {
-            Items = items.Select(ToDto).ToList(),
+            Items = items.Select(d => ToDto(d, tagsByDocument.GetValueOrDefault(d.Id, []))).ToList(),
             Page = query.Page,
             PageSize = query.PageSize,
             TotalCount = total,
@@ -118,7 +121,7 @@ public class DocumentService(
     {
         var document = await repository.GetByIdAsync(ownerUserId, documentId, ct)
             ?? throw new NotFoundException("Document not found.");
-        return ToDto(document);
+        return ToDto(document, await GetTagsForDocumentAsync(documentId, ct));
     }
 
     public async Task DeleteAsync(Guid ownerUserId, Guid documentId, CancellationToken ct)
@@ -149,7 +152,7 @@ public class DocumentService(
 
         logger.LogInformation("Document {DocumentId} re-queued for indexing by user {UserId}", document.Id, ownerUserId);
 
-        return ToDto(document);
+        return ToDto(document, await GetTagsForDocumentAsync(documentId, ct));
     }
 
     public async Task<IReadOnlyList<DocumentChunkDto>> ListChunksAsync(Guid ownerUserId, Guid documentId, CancellationToken ct)
@@ -173,7 +176,40 @@ public class DocumentService(
         return (stream, document.OriginalFileName, document.ContentType);
     }
 
-    private static DocumentDto ToDto(Document document) => new(
+    public async Task<DocumentDto> AttachTagAsync(Guid ownerUserId, Guid documentId, Guid tagId, CancellationToken ct)
+    {
+        var document = await repository.GetByIdAsync(ownerUserId, documentId, ct)
+            ?? throw new NotFoundException("Document not found.");
+        _ = await tagRepository.GetByIdAsync(ownerUserId, tagId, ct)
+            ?? throw new NotFoundException("Tag not found.");
+
+        if (!await tagRepository.IsAttachedAsync(documentId, tagId, ct))
+        {
+            await tagRepository.AttachAsync(documentId, tagId, ct);
+            await tagRepository.SaveChangesAsync(ct);
+        }
+
+        return ToDto(document, await GetTagsForDocumentAsync(documentId, ct));
+    }
+
+    public async Task<DocumentDto> DetachTagAsync(Guid ownerUserId, Guid documentId, Guid tagId, CancellationToken ct)
+    {
+        var document = await repository.GetByIdAsync(ownerUserId, documentId, ct)
+            ?? throw new NotFoundException("Document not found.");
+
+        await tagRepository.DetachAsync(documentId, tagId, ct);
+        await tagRepository.SaveChangesAsync(ct);
+
+        return ToDto(document, await GetTagsForDocumentAsync(documentId, ct));
+    }
+
+    private async Task<IReadOnlyList<TagDto>> GetTagsForDocumentAsync(Guid documentId, CancellationToken ct)
+    {
+        var tagsByDocument = await tagRepository.GetTagsForDocumentsAsync([documentId], ct);
+        return tagsByDocument.GetValueOrDefault(documentId, []);
+    }
+
+    private static DocumentDto ToDto(Document document, IReadOnlyList<TagDto> tags) => new(
         document.Id,
         document.OriginalFileName,
         document.ContentType,
@@ -182,5 +218,6 @@ public class DocumentService(
         document.ProcessingStatus,
         document.ProcessingError,
         document.UploadedAt,
-        document.IndexedAt);
+        document.IndexedAt,
+        tags);
 }

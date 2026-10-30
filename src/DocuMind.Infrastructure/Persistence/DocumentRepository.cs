@@ -47,6 +47,11 @@ public class DocumentRepository(AppDbContext dbContext) : IDocumentRepository
             queryable = queryable.Where(d => d.ProcessingStatus == status);
         }
 
+        if (query.TagId is { } tagId)
+        {
+            queryable = queryable.Where(d => dbContext.DocumentTags.Any(dt => dt.DocumentId == d.Id && dt.TagId == tagId));
+        }
+
         queryable = (query.SortBy, query.SortDescending) switch
         {
             (DocumentSortField.Name, true) => queryable.OrderByDescending(d => d.OriginalFileName),

@@ -20,4 +20,10 @@ public interface IDocumentService
 
     /// <summary>Opens the original uploaded PDF for an owner-verified document, for inline viewing.</summary>
     Task<(Stream Content, string FileName, string ContentType)> OpenFileAsync(Guid ownerUserId, Guid documentId, CancellationToken ct);
+
+    /// <summary>Attaches a tag to a document. Idempotent — attaching an already-attached tag is a no-op.</summary>
+    Task<DocumentDto> AttachTagAsync(Guid ownerUserId, Guid documentId, Guid tagId, CancellationToken ct);
+
+    /// <summary>Detaches a tag from a document. Idempotent — detaching an unattached tag is a no-op.</summary>
+    Task<DocumentDto> DetachTagAsync(Guid ownerUserId, Guid documentId, Guid tagId, CancellationToken ct);
 }

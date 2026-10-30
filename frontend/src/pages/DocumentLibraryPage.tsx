@@ -1,16 +1,18 @@
 import axios from 'axios'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Eye, FileText, FolderOpen, RotateCw, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, FileText, FolderOpen, RotateCw, Search, Trash2, X } from 'lucide-react'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { DocumentStatusBadge } from '../components/documents/DocumentStatusBadge'
 import { FileDropzone } from '../components/documents/FileDropzone'
+import { TagPicker } from '../components/documents/TagPicker'
 import { extractErrorMessages } from '../lib/apiClient'
 import * as documentsApi from '../lib/api/documents'
+import * as tagsApi from '../lib/api/tags'
 import { formatDate, formatFileSize } from '../lib/format'
-import { DocumentProcessingStatus, type DocumentDto, type PagedResult } from '../types/api'
+import { DocumentProcessingStatus, type DocumentDto, type PagedResult, type TagDto } from '../types/api'
 
 const PAGE_SIZE = 10
 
@@ -31,6 +33,7 @@ export function DocumentLibraryPage() {
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<DocumentProcessingStatus | ''>('')
+  const [tagFilter, setTagFilter] = useState('')
   const [sortBy, setSortBy] = useState<'uploadedAt' | 'name'>('uploadedAt')
   const [sortDesc, setSortDesc] = useState(true)
   const [page, setPage] = useState(1)
@@ -43,6 +46,10 @@ export function DocumentLibraryPage() {
 
   const [retryingId, setRetryingId] = useState<string | null>(null)
 
+  const [tags, setTags] = useState<TagDto[]>([])
+  const [tagDeleteTarget, setTagDeleteTarget] = useState<TagDto | null>(null)
+  const [isDeletingTag, setIsDeletingTag] = useState(false)
+
   const fetchDocuments = useCallback(async () => {
     setIsLoading(true)
     setLoadError(null)
@@ -52,6 +59,7 @@ export function DocumentLibraryPage() {
         pageSize: PAGE_SIZE,
         search: search || undefined,
         status: statusFilter === '' ? undefined : statusFilter,
+        tagId: tagFilter || undefined,
         sortBy,
         sortDesc,
       })
@@ -61,11 +69,23 @@ export function DocumentLibraryPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, search, statusFilter, sortBy, sortDesc])
+  }, [page, search, statusFilter, tagFilter, sortBy, sortDesc])
+
+  const fetchTags = useCallback(async () => {
+    try {
+      setTags(await tagsApi.listTags())
+    } catch {
+      setTags([])
+    }
+  }, [])
 
   useEffect(() => {
     fetchDocuments()
   }, [fetchDocuments])
+
+  useEffect(() => {
+    fetchTags()
+  }, [fetchTags])
 
   // While any document on this page is still being indexed, keep polling so status updates
   // (Queued -> Processing -> Indexed/Failed) show up without the user refreshing manually.
@@ -118,6 +138,49 @@ export function DocumentLibraryPage() {
       setLoadError(axios.isAxiosError(error) ? extractErrorMessages(error)[0] : 'Failed to delete document.')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  function replaceDocument(updated: DocumentDto) {
+    setResult((prev) => (prev ? { ...prev, items: prev.items.map((d) => (d.id === updated.id ? updated : d)) } : prev))
+  }
+
+  async function handleToggleTag(doc: DocumentDto, tagId: string) {
+    try {
+      const isAttached = doc.tags.some((t) => t.id === tagId)
+      const updated = isAttached
+        ? await documentsApi.detachTag(doc.id, tagId)
+        : await documentsApi.attachTag(doc.id, tagId)
+      replaceDocument(updated)
+    } catch (error) {
+      setLoadError(axios.isAxiosError(error) ? extractErrorMessages(error)[0] : 'Failed to update tags.')
+    }
+  }
+
+  async function handleCreateAndAttachTag(doc: DocumentDto, name: string) {
+    try {
+      const tag = await tagsApi.createTag(name)
+      setTags((prev) => (prev.some((t) => t.id === tag.id) ? prev : [...prev, tag].sort((a, b) => a.name.localeCompare(b.name))))
+      const updated = await documentsApi.attachTag(doc.id, tag.id)
+      replaceDocument(updated)
+    } catch (error) {
+      setLoadError(axios.isAxiosError(error) ? extractErrorMessages(error)[0] : 'Failed to create tag.')
+    }
+  }
+
+  async function handleConfirmDeleteTag() {
+    if (!tagDeleteTarget) return
+    setIsDeletingTag(true)
+    try {
+      await tagsApi.deleteTag(tagDeleteTarget.id)
+      setTags((prev) => prev.filter((t) => t.id !== tagDeleteTarget.id))
+      if (tagFilter === tagDeleteTarget.id) setTagFilter('')
+      setTagDeleteTarget(null)
+      await fetchDocuments()
+    } catch (error) {
+      setLoadError(axios.isAxiosError(error) ? extractErrorMessages(error)[0] : 'Failed to delete tag.')
+    } finally {
+      setIsDeletingTag(false)
     }
   }
 
@@ -200,6 +263,23 @@ export function DocumentLibraryPage() {
             <option value="name:false">Name (A-Z)</option>
             <option value="name:true">Name (Z-A)</option>
           </select>
+
+          <select
+            value={tagFilter}
+            onChange={(e) => {
+              setPage(1)
+              setTagFilter(e.target.value)
+            }}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors hover:border-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:hover:border-slate-500"
+            aria-label="Filter by tag"
+          >
+            <option value="">All tags</option>
+            {tags.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -229,7 +309,9 @@ export function DocumentLibraryPage() {
               <FolderOpen className="h-6 w-6" aria-hidden="true" />
             </span>
             <p className="mt-3 text-slate-600 dark:text-slate-400">
-              {search || statusFilter !== '' ? 'No documents match your filters.' : 'No documents yet. Upload your first PDF above.'}
+              {search || statusFilter !== '' || tagFilter !== ''
+                ? 'No documents match your filters.'
+                : 'No documents yet. Upload your first PDF above.'}
             </p>
           </div>
         )}
@@ -241,6 +323,7 @@ export function DocumentLibraryPage() {
                 <tr>
                   <th scope="col" className="px-4 py-3">Name</th>
                   <th scope="col" className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3">Tags</th>
                   <th scope="col" className="px-4 py-3">Pages</th>
                   <th scope="col" className="px-4 py-3">Size</th>
                   <th scope="col" className="px-4 py-3">Uploaded</th>
@@ -263,6 +346,33 @@ export function DocumentLibraryPage() {
                       {doc.processingStatus === DocumentProcessingStatus.Failed && doc.processingError && (
                         <p className="mt-1 text-xs text-red-600 dark:text-red-400">{doc.processingError}</p>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {doc.tags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
+                          >
+                            {tag.name}
+                            <button
+                              type="button"
+                              aria-label={`Remove tag ${tag.name} from ${doc.originalFileName}`}
+                              onClick={() => handleToggleTag(doc, tag.id)}
+                              className="rounded-full p-0.5 transition-colors hover:bg-brand-100 dark:hover:bg-brand-500/25"
+                            >
+                              <X className="h-2.5 w-2.5" aria-hidden="true" />
+                            </button>
+                          </span>
+                        ))}
+                        <TagPicker
+                          allTags={tags}
+                          attachedTagIds={new Set(doc.tags.map((t) => t.id))}
+                          onToggle={(tagId) => handleToggleTag(doc, tagId)}
+                          onCreateAndAttach={(name) => handleCreateAndAttachTag(doc, name)}
+                          onDeleteTag={(tag) => setTagDeleteTarget(tag)}
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{doc.pageCount ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{formatFileSize(doc.fileSizeBytes)}</td>
@@ -342,6 +452,16 @@ export function DocumentLibraryPage() {
         isBusy={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={tagDeleteTarget !== null}
+        title="Delete tag?"
+        description={`"${tagDeleteTarget?.name}" will be removed from every document and deleted. This cannot be undone.`}
+        confirmLabel="Delete"
+        isBusy={isDeletingTag}
+        onConfirm={handleConfirmDeleteTag}
+        onCancel={() => setTagDeleteTarget(null)}
       />
     </main>
   )
