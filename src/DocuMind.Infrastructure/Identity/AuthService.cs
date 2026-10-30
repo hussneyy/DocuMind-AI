@@ -70,6 +70,25 @@ public class AuthService(
         return user is null ? null : ToDto(user);
     }
 
+    public async Task<AuthResult> UpdateDisplayNameAsync(Guid userId, string displayName, CancellationToken ct)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return AuthResult.Failure(["User not found."]);
+        }
+
+        user.DisplayName = displayName;
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return AuthResult.Failure(result.Errors.Select(e => e.Description).ToList());
+        }
+
+        auditLogger.Log(AuditEventType.DisplayNameChanged, user.Id, $"displayName={displayName}");
+        return AuthResult.Success(ToDto(user));
+    }
+
     private static CurrentUserDto ToDto(ApplicationUser user) =>
         new(user.Id, user.Email ?? string.Empty, user.DisplayName, user.CreatedAt);
 }

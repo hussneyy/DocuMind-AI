@@ -23,3 +23,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return null
   }
 }
+
+export async function updateDisplayName(displayName: string): Promise<CurrentUser> {
+  const { data } = await apiClient.patch<CurrentUser>('/auth/me', { displayName })
+  return data
+}

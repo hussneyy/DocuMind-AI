@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { Footer } from './components/layout/Footer'
 import { Navbar } from './components/layout/Navbar'
+import { AccountPage } from './pages/AccountPage'
 import { ChatPage } from './pages/ChatPage'
 import { DocumentLibraryPage } from './pages/DocumentLibraryPage'
 import { DocumentViewerPage } from './pages/DocumentViewerPage'
@@ -26,6 +27,7 @@ function App() {
             <Route path="/documents/:id/view" element={<DocumentViewerPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/account" element={<AccountPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

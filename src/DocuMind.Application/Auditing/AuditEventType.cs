@@ -9,4 +9,5 @@ public enum AuditEventType
     DocumentUploaded,
     DocumentDeleted,
     ConversationDeleted,
+    DisplayNameChanged,
 }

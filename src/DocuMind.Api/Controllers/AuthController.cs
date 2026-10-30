@@ -54,4 +54,17 @@ public class AuthController(IAuthService authService) : ControllerBase
         var user = await authService.GetCurrentUserAsync(User.GetUserId(), ct);
         return user is null ? NotFound() : Ok(user);
     }
+
+    [HttpPatch("me")]
+    [Authorize]
+    public async Task<ActionResult<CurrentUserDto>> UpdateDisplayName(UpdateDisplayNameRequest request, CancellationToken ct)
+    {
+        var result = await authService.UpdateDisplayNameAsync(User.GetUserId(), request.DisplayName, ct);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        return Ok(result.User);
+    }
 }

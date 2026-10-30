@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, Settings } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type { CurrentUser } from '../../types/api'
 
 function initialsOf(name: string): string {
@@ -59,6 +60,15 @@ export function ProfileMenu({ user, onLogout }: { user: CurrentUser; onLogout: (
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
           </div>
           <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+          <Link
+            to="/account"
+            role="menuitem"
+            onClick={() => setIsOpen(false)}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            <Settings className="h-4 w-4 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+            Account settings
+          </Link>
           <button
             type="button"
             role="menuitem"

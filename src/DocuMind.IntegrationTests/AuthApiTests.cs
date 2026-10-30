@@ -109,6 +109,63 @@ public class AuthApiTests
         Assert.Equal(HttpStatusCode.Unauthorized, meAfterLogout.StatusCode);
     }
 
+    [Fact]
+    public async Task UpdateDisplayName_ThenMe_ReturnsTheUpdatedProfile()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = "Sup3rSecret!1",
+            displayName = "Original Name",
+        });
+        registerResponse.EnsureSuccessStatusCode();
+        AttachAuthCookie(client, registerResponse);
+
+        var patchResponse = await client.PatchAsJsonAsync("/api/auth/me", new { displayName = "Updated Name" });
+        patchResponse.EnsureSuccessStatusCode();
+        var patched = await patchResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+        Assert.Equal("Updated Name", patched!.DisplayName);
+
+        var meResponse = await client.GetAsync("/api/auth/me");
+        meResponse.EnsureSuccessStatusCode();
+        var me = await meResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+        Assert.Equal("Updated Name", me!.DisplayName);
+    }
+
+    [Fact]
+    public async Task UpdateDisplayName_WithoutAuthentication_IsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+
+        var patchResponse = await client.PatchAsJsonAsync("/api/auth/me", new { displayName = "Nobody" });
+        Assert.Equal(HttpStatusCode.Unauthorized, patchResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateDisplayName_WithAnEmptyName_IsRejected()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = "Sup3rSecret!1",
+            displayName = "Original Name",
+        });
+        registerResponse.EnsureSuccessStatusCode();
+        AttachAuthCookie(client, registerResponse);
+
+        var patchResponse = await client.PatchAsJsonAsync("/api/auth/me", new { displayName = "" });
+        Assert.Equal(HttpStatusCode.BadRequest, patchResponse.StatusCode);
+    }
+
     private static void AttachAuthCookie(HttpClient client, HttpResponseMessage response)
     {
         if (!response.Headers.TryGetValues("Set-Cookie", out var cookies))

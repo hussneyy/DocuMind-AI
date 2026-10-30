@@ -10,4 +10,6 @@ public interface IAuthService
     Task LogoutAsync(Guid userId, CancellationToken ct);
 
     Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken ct);
+
+    Task<AuthResult> UpdateDisplayNameAsync(Guid userId, string displayName, CancellationToken ct);
 }
