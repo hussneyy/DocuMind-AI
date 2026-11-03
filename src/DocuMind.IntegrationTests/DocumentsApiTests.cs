@@ -139,6 +139,7 @@ public class DocumentsApiTests
             firstName = "Test",
             lastName = "User",
             country = "US",
+            phoneNumber = "+1 5550100000",
             preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();

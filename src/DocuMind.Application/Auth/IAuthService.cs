@@ -3,7 +3,8 @@ namespace DocuMind.Application.Auth;
 public interface IAuthService
 {
     Task<AuthResult> RegisterAsync(
-        string email, string password, string firstName, string lastName, string country, string preferredLanguage, CancellationToken ct);
+        string email, string password, string firstName, string lastName, string country, string phoneNumber,
+        string preferredLanguage, CancellationToken ct);
 
     /// <summary>
     /// Validates credentials and, on success, signs the user into the current HTTP context.

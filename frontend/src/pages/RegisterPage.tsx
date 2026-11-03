@@ -23,8 +23,11 @@ export function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [country, setCountry] = useState('')
+  const [phoneDigits, setPhoneDigits] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const dialCode = COUNTRIES.find((c) => c.code === country)?.dialCode ?? ''
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -37,7 +40,8 @@ export function RegisterPage() {
 
     setIsSubmitting(true)
     try {
-      await register({ email, password, firstName, lastName, country, preferredLanguage: language })
+      const phoneNumber = `${dialCode} ${phoneDigits.trim()}`.trim()
+      await register({ email, password, firstName, lastName, country, phoneNumber, preferredLanguage: language })
       navigate('/documents')
     } catch (error) {
       setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : [t('auth.register.registrationFailed')])
@@ -140,6 +144,31 @@ export function RegisterPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="register-phone" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              {t('auth.register.phoneNumber')}
+            </label>
+            <div className="flex gap-2">
+              <span
+                id="register-phone-dial-code"
+                className="flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
+              >
+                {dialCode || '+--'}
+              </span>
+              <input
+                id="register-phone"
+                type="tel"
+                autoComplete="tel-national"
+                required
+                aria-describedby="register-phone-dial-code"
+                value={phoneDigits}
+                onChange={(e) => setPhoneDigits(e.target.value)}
+                placeholder="7911 123456"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">

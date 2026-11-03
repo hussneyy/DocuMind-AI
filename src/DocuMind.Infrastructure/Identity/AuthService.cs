@@ -21,7 +21,8 @@ public class AuthService(
     private readonly string _frontendBaseUrl = (configuration["Cors:AllowedOrigins:0"] ?? "http://localhost:5173").TrimEnd('/');
 
     public async Task<AuthResult> RegisterAsync(
-        string email, string password, string firstName, string lastName, string country, string preferredLanguage, CancellationToken ct)
+        string email, string password, string firstName, string lastName, string country, string phoneNumber,
+        string preferredLanguage, CancellationToken ct)
     {
         if (!AllowedLanguages.Contains(preferredLanguage))
         {
@@ -37,6 +38,7 @@ public class AuthService(
             DisplayName = $"{firstName} {lastName}",
             CreatedAt = DateTimeOffset.UtcNow,
             Country = country,
+            PhoneNumber = phoneNumber,
             PreferredLanguage = preferredLanguage,
         };
 

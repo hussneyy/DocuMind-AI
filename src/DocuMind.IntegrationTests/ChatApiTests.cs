@@ -194,6 +194,7 @@ public class ChatApiTests
             firstName = "Chat",
             lastName = "TestUser",
             country = "US",
+            phoneNumber = "+1 5550100000",
             preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();

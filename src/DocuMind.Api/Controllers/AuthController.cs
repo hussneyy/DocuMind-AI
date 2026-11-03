@@ -17,7 +17,8 @@ public class AuthController(IAuthService authService) : ControllerBase
     public async Task<ActionResult<CurrentUserDto>> Register(RegisterRequest request, CancellationToken ct)
     {
         var result = await authService.RegisterAsync(
-            request.Email, request.Password, request.FirstName, request.LastName, request.Country, request.PreferredLanguage, ct);
+            request.Email, request.Password, request.FirstName, request.LastName, request.Country,
+            request.PhoneNumber, request.PreferredLanguage, ct);
         if (!result.Succeeded)
         {
             return BadRequest(new { errors = result.Errors });

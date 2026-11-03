@@ -29,6 +29,7 @@ export interface RegisterInput {
   firstName: string
   lastName: string
   country: string
+  phoneNumber: string
   preferredLanguage: string
 }
 

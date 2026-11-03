@@ -22,7 +22,7 @@ public class AccountDeletionApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", firstName = "Delete", lastName = "Tester", country = "US", preferredLanguage = "en" });
+            new { email, password = "Sup3rSecret!1", firstName = "Delete", lastName = "Tester", country = "US", phoneNumber = "+1 5550100000", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
 
@@ -46,7 +46,7 @@ public class AccountDeletionApiTests
 
         // The email is free again — a new account can reuse it.
         var reRegisterResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "AnotherSecret!2", firstName = "Reused", lastName = "Email", country = "US", preferredLanguage = "en" });
+            new { email, password = "AnotherSecret!2", firstName = "Reused", lastName = "Email", country = "US", phoneNumber = "+1 5550100000", preferredLanguage = "en" });
         Assert.True(reRegisterResponse.IsSuccessStatusCode, "Email should be reusable after the owning account is deleted.");
     }
 
@@ -58,7 +58,7 @@ public class AccountDeletionApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", firstName = "Delete", lastName = "Tester", country = "US", preferredLanguage = "en" });
+            new { email, password = "Sup3rSecret!1", firstName = "Delete", lastName = "Tester", country = "US", phoneNumber = "+1 5550100000", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
 

@@ -187,6 +187,7 @@ public class SearchApiTests
             firstName = "Search",
             lastName = "TestUser",
             country = "US",
+            phoneNumber = "+1 5550100000",
             preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();
