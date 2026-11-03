@@ -1,8 +1,8 @@
 import { apiClient } from '../apiClient'
-import type { CurrentUser, ForgotPasswordResult, LoginResult, TwoFactorSetup, UpdateProfileInput } from '../../types/api'
+import type { CurrentUser, ForgotPasswordResult, LoginResult, RegisterInput, TwoFactorSetup, UpdateProfileInput } from '../../types/api'
 
-export async function register(email: string, password: string, displayName: string): Promise<CurrentUser> {
-  const { data } = await apiClient.post<CurrentUser>('/auth/register', { email, password, displayName })
+export async function register(input: RegisterInput): Promise<CurrentUser> {
+  const { data } = await apiClient.post<CurrentUser>('/auth/register', input)
   return data
 }
 

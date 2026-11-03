@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import * as authApi from '../lib/api/auth'
-import type { CurrentUser, LoginResult, UpdateProfileInput } from '../types/api'
+import type { CurrentUser, LoginResult, RegisterInput, UpdateProfileInput } from '../types/api'
 
 interface AuthContextValue {
   user: CurrentUser | null
@@ -11,7 +11,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<LoginResult>
   completeTwoFactorLogin: (code: string) => Promise<void>
   completeTwoFactorLoginWithRecoveryCode: (recoveryCode: string) => Promise<void>
-  register: (email: string, password: string, displayName: string) => Promise<void>
+  register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
   updateProfile: (input: UpdateProfileInput) => Promise<void>
   uploadAvatar: (file: File) => Promise<void>
@@ -59,8 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(currentUser)
   }, [])
 
-  const register = useCallback(async (email: string, password: string, displayName: string) => {
-    const currentUser = await authApi.register(email, password, displayName)
+  const register = useCallback(async (input: RegisterInput) => {
+    const currentUser = await authApi.register(input)
     setUser(currentUser)
   }, [])
 

@@ -19,7 +19,8 @@ public class AuthService(
 
     private readonly string _frontendBaseUrl = (configuration["Cors:AllowedOrigins:0"] ?? "http://localhost:5173").TrimEnd('/');
 
-    public async Task<AuthResult> RegisterAsync(string email, string password, string displayName, CancellationToken ct)
+    public async Task<AuthResult> RegisterAsync(
+        string email, string password, string displayName, string? bio, string? location, string? phoneNumber, CancellationToken ct)
     {
         var user = new ApplicationUser
         {
@@ -27,6 +28,9 @@ public class AuthService(
             Email = email,
             DisplayName = displayName,
             CreatedAt = DateTimeOffset.UtcNow,
+            Bio = string.IsNullOrWhiteSpace(bio) ? null : bio.Trim(),
+            Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim(),
+            PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim(),
         };
 
         var result = await userManager.CreateAsync(user, password);

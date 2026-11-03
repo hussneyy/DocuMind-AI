@@ -16,7 +16,8 @@ public class AuthController(IAuthService authService) : ControllerBase
     [EnableRateLimiting("auth")]
     public async Task<ActionResult<CurrentUserDto>> Register(RegisterRequest request, CancellationToken ct)
     {
-        var result = await authService.RegisterAsync(request.Email, request.Password, request.DisplayName, ct);
+        var result = await authService.RegisterAsync(
+            request.Email, request.Password, request.DisplayName, request.Bio, request.Location, request.PhoneNumber, ct);
         if (!result.Succeeded)
         {
             return BadRequest(new { errors = result.Errors });

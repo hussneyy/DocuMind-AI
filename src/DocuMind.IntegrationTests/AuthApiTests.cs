@@ -41,6 +41,51 @@ public class AuthApiTests
     }
 
     [Fact]
+    public async Task Register_WithBioLocationAndPhoneNumber_PersistsAllFields()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = "Sup3rSecret!1",
+            displayName = "Ada Lovelace",
+            bio = "Mathematician and writer.",
+            location = "London",
+            phoneNumber = "+44 20 7946 0958",
+        });
+        registerResponse.EnsureSuccessStatusCode();
+        var registered = await registerResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+
+        Assert.Equal("Mathematician and writer.", registered!.Bio);
+        Assert.Equal("London", registered.Location);
+        Assert.Equal("+44 20 7946 0958", registered.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task Register_WithoutBioLocationOrPhoneNumber_StillSucceeds()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            email,
+            password = "Sup3rSecret!1",
+            displayName = "No Extras",
+        });
+        registerResponse.EnsureSuccessStatusCode();
+        var registered = await registerResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+
+        Assert.Null(registered!.Bio);
+        Assert.Null(registered.Location);
+        Assert.Null(registered.PhoneNumber);
+    }
+
+    [Fact]
     public async Task Register_WithAnAlreadyUsedEmail_IsRejected()
     {
         var client = _factory.CreateClient();

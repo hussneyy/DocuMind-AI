@@ -17,6 +17,15 @@ export interface UpdateProfileInput {
   phoneNumber?: string
 }
 
+export interface RegisterInput {
+  email: string
+  password: string
+  displayName: string
+  bio?: string
+  location?: string
+  phoneNumber?: string
+}
+
 export interface ForgotPasswordResult {
   accountExists: boolean
   resetLink: string | null
