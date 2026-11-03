@@ -1,3 +1,4 @@
+
 # DocuMind AI
 
 Intelligent document search and AI knowledge assistant. Upload PDFs, search them with natural
@@ -728,3 +729,4 @@ what's deliberately still missing.
 MIT — see [LICENSE](LICENSE). Replace the copyright line in that file with your own name before
 publishing this as your own portfolio project. Third-party dependencies are listed in
 [DocuMind.sln](DocuMind.sln)'s project files (`*.csproj`) and [frontend/package.json](frontend/package.json).
+
