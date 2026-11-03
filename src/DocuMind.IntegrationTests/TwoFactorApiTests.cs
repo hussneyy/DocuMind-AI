@@ -23,7 +23,7 @@ public class TwoFactorApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "2FA Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "TwoFactor", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         ApplyCookies(client, registerResponse);
 
@@ -53,7 +53,7 @@ public class TwoFactorApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "2FA Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "TwoFactor", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         ApplyCookies(client, registerResponse);
 
@@ -71,7 +71,7 @@ public class TwoFactorApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "2FA Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "TwoFactor", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         ApplyCookies(client, registerResponse);
 
@@ -108,7 +108,7 @@ public class TwoFactorApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "2FA Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "TwoFactor", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         ApplyCookies(client, registerResponse);
 
@@ -131,7 +131,7 @@ public class TwoFactorApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "2FA Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "TwoFactor", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         ApplyCookies(client, registerResponse);
 
@@ -170,7 +170,7 @@ public class TwoFactorApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "2FA Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "TwoFactor", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         ApplyCookies(client, registerResponse);
 
@@ -197,7 +197,7 @@ public class TwoFactorApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "2FA Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "TwoFactor", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         ApplyCookies(client, registerResponse);
 

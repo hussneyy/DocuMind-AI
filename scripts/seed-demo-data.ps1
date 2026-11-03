@@ -17,7 +17,10 @@ param(
     [string]$BaseUrl = "http://localhost:8080/api",
     [string]$Email = "demo@documind.local",
     [string]$Password = "DemoPass123!",
-    [string]$DisplayName = "Demo User"
+    [string]$FirstName = "Demo",
+    [string]$LastName = "User",
+    [string]$Country = "US",
+    [string]$PreferredLanguage = "en"
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +30,14 @@ $DemoDataDir = Join-Path (Split-Path -Parent $ScriptDir) "demo-data"
 Write-Host "Seeding demo data against $BaseUrl ..."
 
 $session = $null
-$registerBody = @{ email = $Email; password = $Password; displayName = $DisplayName } | ConvertTo-Json
+$registerBody = @{
+    email = $Email
+    password = $Password
+    firstName = $FirstName
+    lastName = $LastName
+    country = $Country
+    preferredLanguage = $PreferredLanguage
+} | ConvertTo-Json
 $headers = @{ "X-Requested-With" = "DocuMindSeedScript"; "Content-Type" = "application/json" }
 
 try {

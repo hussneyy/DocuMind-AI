@@ -191,7 +191,10 @@ public class ChatApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Chat Test User",
+            firstName = "Chat",
+            lastName = "TestUser",
+            country = "US",
+            preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();
 

@@ -136,7 +136,10 @@ public class DocumentsApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Test User",
+            firstName = "Test",
+            lastName = "User",
+            country = "US",
+            preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();
 

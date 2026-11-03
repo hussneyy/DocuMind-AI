@@ -1,4 +1,8 @@
+import { useLanguage } from '../../context/LanguageContext'
+
 export function Footer() {
+  const { t } = useLanguage()
+
   return (
     <footer className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
@@ -12,27 +16,24 @@ export function Footer() {
               </span>
               DocuMind AI
             </p>
-            <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">
-              An open-source portfolio project demonstrating retrieval-augmented document search
-              and question answering. Not affiliated with any commercial product.
-            </p>
+            <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">{t('footer.tagline')}</p>
           </div>
 
           <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
             <span className="cursor-default text-slate-500 dark:text-slate-400" title="See the project README once published">
-              Documentation
+              {t('footer.documentation')}
             </span>
             <span className="cursor-default text-slate-500 dark:text-slate-400" title="See the project README once published">
-              Source code
+              {t('footer.sourceCode')}
             </span>
             <a href="#privacy" className="transition-colors hover:text-slate-900 dark:hover:text-white">
-              Privacy &amp; source verification
+              {t('footer.privacyLink')}
             </a>
           </div>
         </div>
 
         <p className="mt-8 text-xs text-slate-500 dark:text-slate-400">
-          &copy; {new Date().getFullYear()} DocuMind AI. Built for demonstration purposes.
+          {t('footer.copyright', { year: new Date().getFullYear() })}
         </p>
       </div>
     </footer>

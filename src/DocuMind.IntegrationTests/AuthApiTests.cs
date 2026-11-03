@@ -27,7 +27,10 @@ public class AuthApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Ada Lovelace",
+            firstName = "Ada",
+            lastName = "Lovelace",
+            country = "GB",
+            preferredLanguage = "en",
         });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
@@ -37,52 +40,50 @@ public class AuthApiTests
         var me = await meResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
 
         Assert.Equal(email, me!.Email);
+        Assert.Equal("Ada", me.FirstName);
+        Assert.Equal("Lovelace", me.LastName);
         Assert.Equal("Ada Lovelace", me.DisplayName);
+        Assert.Equal("GB", me.Country);
+        Assert.Equal("en", me.PreferredLanguage);
     }
 
     [Fact]
-    public async Task Register_WithBioLocationAndPhoneNumber_PersistsAllFields()
+    public async Task Register_WithAnUnsupportedLanguage_IsRejected()
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
-        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", new
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Ada Lovelace",
-            bio = "Mathematician and writer.",
-            location = "London",
-            phoneNumber = "+44 20 7946 0958",
+            firstName = "Ada",
+            lastName = "Lovelace",
+            country = "GB",
+            preferredLanguage = "xx",
         });
-        registerResponse.EnsureSuccessStatusCode();
-        var registered = await registerResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
 
-        Assert.Equal("Mathematician and writer.", registered!.Bio);
-        Assert.Equal("London", registered.Location);
-        Assert.Equal("+44 20 7946 0958", registered.PhoneNumber);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task Register_WithoutBioLocationOrPhoneNumber_StillSucceeds()
+    public async Task Register_WithoutACountry_IsRejected()
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
-        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", new
+        var response = await client.PostAsJsonAsync("/api/auth/register", new
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "No Extras",
+            firstName = "Ada",
+            lastName = "Lovelace",
+            preferredLanguage = "en",
         });
-        registerResponse.EnsureSuccessStatusCode();
-        var registered = await registerResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
 
-        Assert.Null(registered!.Bio);
-        Assert.Null(registered.Location);
-        Assert.Null(registered.PhoneNumber);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -93,11 +94,11 @@ public class AuthApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var first = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "First" });
+            new { email, password = "Sup3rSecret!1", firstName = "First", lastName = "User", country = "US", preferredLanguage = "en" });
         first.EnsureSuccessStatusCode();
 
         var second = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "Second" });
+            new { email, password = "Sup3rSecret!1", firstName = "Second", lastName = "User", country = "US", preferredLanguage = "en" });
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
     }
 
@@ -112,7 +113,10 @@ public class AuthApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Test User",
+            firstName = "Test",
+            lastName = "User",
+            country = "US",
+            preferredLanguage = "en",
         });
         registerResponse.EnsureSuccessStatusCode();
 
@@ -139,7 +143,10 @@ public class AuthApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Test User",
+            firstName = "Test",
+            lastName = "User",
+            country = "US",
+            preferredLanguage = "en",
         });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
@@ -167,7 +174,10 @@ public class AuthApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Original Name",
+            firstName = "Original",
+            lastName = "Name",
+            country = "US",
+            preferredLanguage = "en",
         });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
@@ -204,7 +214,10 @@ public class AuthApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Original Name",
+            firstName = "Original",
+            lastName = "Name",
+            country = "US",
+            preferredLanguage = "en",
         });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
@@ -221,7 +234,7 @@ public class AuthApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "Original Name" });
+            new { email, password = "Sup3rSecret!1", firstName = "Original", lastName = "Name", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
 
@@ -252,7 +265,7 @@ public class AuthApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "Avatar Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "Avatar", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
 
@@ -287,7 +300,7 @@ public class AuthApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "Avatar Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "Avatar", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
         AttachAuthCookie(client, registerResponse);
 
@@ -308,7 +321,7 @@ public class AuthApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "Reset Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "Reset", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
 
         var forgotResponse = await client.PostAsJsonAsync("/api/auth/forgot-password", new { email });
@@ -362,7 +375,7 @@ public class AuthApiTests
         var email = $"user-{Guid.NewGuid():N}@example.com";
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
-            new { email, password = "Sup3rSecret!1", displayName = "Reset Tester" });
+            new { email, password = "Sup3rSecret!1", firstName = "Reset", lastName = "Tester", country = "US", preferredLanguage = "en" });
         registerResponse.EnsureSuccessStatusCode();
 
         var response = await client.PostAsJsonAsync("/api/auth/reset-password", new

@@ -3,7 +3,7 @@ namespace DocuMind.Application.Auth;
 public interface IAuthService
 {
     Task<AuthResult> RegisterAsync(
-        string email, string password, string displayName, string? bio, string? location, string? phoneNumber, CancellationToken ct);
+        string email, string password, string firstName, string lastName, string country, string preferredLanguage, CancellationToken ct);
 
     /// <summary>
     /// Validates credentials and, on success, signs the user into the current HTTP context.
@@ -18,7 +18,8 @@ public interface IAuthService
     Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken ct);
 
     Task<AuthResult> UpdateProfileAsync(
-        Guid userId, string displayName, string? bio, string? location, string? phoneNumber, CancellationToken ct);
+        Guid userId, string displayName, string? bio, string? location, string? phoneNumber,
+        string? country, string? preferredLanguage, CancellationToken ct);
 
     /// <summary>Saves a new avatar, replacing and deleting any previous one. Null if the user doesn't exist.</summary>
     Task<CurrentUserDto?> UpdateAvatarAsync(Guid userId, Stream content, string contentType, CancellationToken ct);

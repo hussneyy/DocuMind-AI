@@ -6,10 +6,12 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/TextField'
+import { useLanguage } from '../context/LanguageContext'
 import * as authApi from '../lib/api/auth'
 import { extractErrorMessages } from '../lib/apiClient'
 
 export function ResetPasswordPage() {
+  const { t } = useLanguage()
   const [searchParams] = useSearchParams()
   const email = searchParams.get('email') ?? ''
   const token = searchParams.get('token') ?? ''
@@ -27,7 +29,7 @@ export function ResetPasswordPage() {
     setErrors([])
 
     if (newPassword !== confirmPassword) {
-      setErrors(['Passwords do not match.'])
+      setErrors([t('auth.register.passwordsDoNotMatch')])
       return
     }
 
@@ -36,7 +38,7 @@ export function ResetPasswordPage() {
       await authApi.resetPassword(email, token, newPassword)
       setIsDone(true)
     } catch (error) {
-      setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : ['Failed to reset password.'])
+      setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : [t('auth.resetPassword.resetFailed')])
     } finally {
       setIsSubmitting(false)
     }
@@ -50,23 +52,23 @@ export function ResetPasswordPage() {
         <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-600/30">
           <KeyRound className="h-5 w-5" aria-hidden="true" />
         </span>
-        <h1 className="mt-4 text-2xl">Set a new password</h1>
+        <h1 className="mt-4 text-2xl">{t('auth.resetPassword.title')}</h1>
 
         {isDone ? (
           <div className="mt-6 flex flex-col gap-4">
-            <Alert variant="success">Your password has been reset.</Alert>
+            <Alert variant="success">{t('auth.resetPassword.done')}</Alert>
             <Button to="/login" size="lg">
-              Continue to log in
+              {t('auth.resetPassword.continueToLogin')}
             </Button>
           </div>
         ) : missingLinkParams ? (
           <div className="mt-6">
             <Alert variant="error">
-              This reset link is missing required information. Request a new one from the{' '}
+              {t('auth.resetPassword.missingParamsPrefix')}{' '}
               <Link to="/forgot-password" className="font-medium underline">
-                forgot password
+                {t('auth.resetPassword.missingParamsLink')}
               </Link>{' '}
-              page.
+              {t('auth.resetPassword.missingParamsSuffix')}
             </Alert>
           </div>
         ) : (
@@ -82,11 +84,11 @@ export function ResetPasswordPage() {
             )}
 
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Resetting password for <span className="font-medium text-slate-900 dark:text-white">{email}</span>
+              {t('auth.resetPassword.resettingFor')} <span className="font-medium text-slate-900 dark:text-white">{email}</span>
             </p>
 
             <TextField
-              label="New password"
+              label={t('auth.resetPassword.newPassword')}
               type="password"
               autoComplete="new-password"
               required
@@ -95,7 +97,7 @@ export function ResetPasswordPage() {
               onChange={(e) => setNewPassword(e.target.value)}
             />
             <TextField
-              label="Confirm new password"
+              label={t('auth.resetPassword.confirmNewPassword')}
               type="password"
               autoComplete="new-password"
               required
@@ -103,10 +105,10 @@ export function ResetPasswordPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
-            <p className="text-xs text-slate-500 dark:text-slate-400">At least 8 characters.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('auth.resetPassword.passwordHint')}</p>
 
             <Button type="submit" size="lg" isLoading={isSubmitting} className="mt-2">
-              {isSubmitting ? 'Resetting...' : 'Reset password'}
+              {isSubmitting ? t('auth.resetPassword.resetting') : t('auth.resetPassword.resetPassword')}
             </Button>
           </form>
         )}

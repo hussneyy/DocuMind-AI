@@ -184,7 +184,10 @@ public class SearchApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Search Test User",
+            firstName = "Search",
+            lastName = "TestUser",
+            country = "US",
+            preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();
 

@@ -17,7 +17,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     public async Task<ActionResult<CurrentUserDto>> Register(RegisterRequest request, CancellationToken ct)
     {
         var result = await authService.RegisterAsync(
-            request.Email, request.Password, request.DisplayName, request.Bio, request.Location, request.PhoneNumber, ct);
+            request.Email, request.Password, request.FirstName, request.LastName, request.Country, request.PreferredLanguage, ct);
         if (!result.Succeeded)
         {
             return BadRequest(new { errors = result.Errors });
@@ -94,7 +94,8 @@ public class AuthController(IAuthService authService) : ControllerBase
     public async Task<ActionResult<CurrentUserDto>> UpdateProfile(UpdateProfileRequest request, CancellationToken ct)
     {
         var result = await authService.UpdateProfileAsync(
-            User.GetUserId(), request.DisplayName, request.Bio, request.Location, request.PhoneNumber, ct);
+            User.GetUserId(), request.DisplayName, request.Bio, request.Location, request.PhoneNumber,
+            request.Country, request.PreferredLanguage, ct);
         if (!result.Succeeded)
         {
             return BadRequest(new { errors = result.Errors });

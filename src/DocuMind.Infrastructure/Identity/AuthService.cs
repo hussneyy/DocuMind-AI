@@ -16,21 +16,28 @@ public class AuthService(
     IAuditLogger auditLogger) : IAuthService
 {
     private const string AuthenticatorIssuer = "DocuMind AI";
+    private static readonly HashSet<string> AllowedLanguages = ["en", "es", "fr", "de"];
 
     private readonly string _frontendBaseUrl = (configuration["Cors:AllowedOrigins:0"] ?? "http://localhost:5173").TrimEnd('/');
 
     public async Task<AuthResult> RegisterAsync(
-        string email, string password, string displayName, string? bio, string? location, string? phoneNumber, CancellationToken ct)
+        string email, string password, string firstName, string lastName, string country, string preferredLanguage, CancellationToken ct)
     {
+        if (!AllowedLanguages.Contains(preferredLanguage))
+        {
+            return AuthResult.Failure(["Unsupported language."]);
+        }
+
         var user = new ApplicationUser
         {
             UserName = email,
             Email = email,
-            DisplayName = displayName,
+            FirstName = firstName,
+            LastName = lastName,
+            DisplayName = $"{firstName} {lastName}",
             CreatedAt = DateTimeOffset.UtcNow,
-            Bio = string.IsNullOrWhiteSpace(bio) ? null : bio.Trim(),
-            Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim(),
-            PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim(),
+            Country = country,
+            PreferredLanguage = preferredLanguage,
         };
 
         var result = await userManager.CreateAsync(user, password);
@@ -91,7 +98,8 @@ public class AuthService(
     }
 
     public async Task<AuthResult> UpdateProfileAsync(
-        Guid userId, string displayName, string? bio, string? location, string? phoneNumber, CancellationToken ct)
+        Guid userId, string displayName, string? bio, string? location, string? phoneNumber,
+        string? country, string? preferredLanguage, CancellationToken ct)
     {
         var user = await userManager.FindByIdAsync(userId.ToString());
         if (user is null)
@@ -99,10 +107,23 @@ public class AuthService(
             return AuthResult.Failure(["User not found."]);
         }
 
+        if (preferredLanguage is not null && !AllowedLanguages.Contains(preferredLanguage))
+        {
+            return AuthResult.Failure(["Unsupported language."]);
+        }
+
         user.DisplayName = displayName;
         user.Bio = string.IsNullOrWhiteSpace(bio) ? null : bio.Trim();
         user.Location = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
         user.PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+        if (!string.IsNullOrWhiteSpace(country))
+        {
+            user.Country = country;
+        }
+        if (preferredLanguage is not null)
+        {
+            user.PreferredLanguage = preferredLanguage;
+        }
 
         var result = await userManager.UpdateAsync(user);
         if (!result.Succeeded)
@@ -365,10 +386,14 @@ public class AuthService(
     private static CurrentUserDto ToDto(ApplicationUser user) => new(
         user.Id,
         user.Email ?? string.Empty,
+        user.FirstName,
+        user.LastName,
         user.DisplayName,
         user.CreatedAt,
         user.Bio,
         user.Location,
+        user.Country,
+        user.PreferredLanguage,
         user.PhoneNumber,
         user.AvatarStorageKey is not null,
         user.TwoFactorEnabled);

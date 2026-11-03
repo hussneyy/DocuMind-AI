@@ -2,19 +2,21 @@ import { FileText, MessageSquare, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { Button } from '../ui/Button'
 import { ProfileMenu } from './ProfileMenu'
 import { ThemeToggle } from './ThemeToggle'
 
-const AUTHED_LINKS = [
-  { to: '/documents', label: 'My Documents', icon: FileText },
-  { to: '/search', label: 'Search', icon: Search },
-  { to: '/chat', label: 'Ask AI', icon: MessageSquare },
-]
-
 export function Navbar() {
   const { user, logout, avatarVersion } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
+
+  const authedLinks = [
+    { to: '/documents', label: t('nav.myDocuments'), icon: FileText },
+    { to: '/search', label: t('nav.search'), icon: Search },
+    { to: '/chat', label: t('nav.askAi'), icon: MessageSquare },
+  ]
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export function Navbar() {
           DocuMind AI
           {!user && (
             <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400 sm:inline">
-              Portfolio project
+              {t('nav.portfolioProject')}
             </span>
           )}
         </Link>
@@ -65,13 +67,13 @@ export function Navbar() {
         {!user && (
           <div className="hidden items-center gap-8 md:flex">
             <a href="/#features" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-              Features
+              {t('nav.features')}
             </a>
             <a href="/#how-it-works" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-              How it works
+              {t('nav.howItWorks')}
             </a>
             <a href="/#privacy" className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-              Privacy
+              {t('nav.privacy')}
             </a>
           </div>
         )}
@@ -80,7 +82,7 @@ export function Navbar() {
           {user ? (
             <>
               <div className="hidden items-center gap-1 sm:flex">
-                {AUTHED_LINKS.map(({ to, label, icon: Icon }) => (
+                {authedLinks.map(({ to, label, icon: Icon }) => (
                   <NavLink
                     key={to}
                     to={to}
@@ -104,10 +106,10 @@ export function Navbar() {
             <>
               <ThemeToggle />
               <Button to="/login" variant="ghost" size="md">
-                Log in
+                {t('nav.logIn')}
               </Button>
               <Button to="/register" variant="primary" size="md">
-                Start Searching
+                {t('nav.startSearching')}
               </Button>
             </>
           )}

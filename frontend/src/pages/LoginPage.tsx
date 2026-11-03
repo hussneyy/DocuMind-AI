@@ -7,10 +7,12 @@ import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/TextField'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 import { extractErrorMessages } from '../lib/apiClient'
 
 export function LoginPage() {
   const { login, completeTwoFactorLogin, completeTwoFactorLoginWithRecoveryCode } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -37,7 +39,7 @@ export function LoginPage() {
         navigate(redirectTo)
       }
     } catch (error) {
-      setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : ['Login failed.'])
+      setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : [t('auth.login.loginFailed')])
     } finally {
       setIsSubmitting(false)
     }
@@ -55,7 +57,7 @@ export function LoginPage() {
       }
       navigate(redirectTo)
     } catch (error) {
-      setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : ['Verification failed.'])
+      setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : [t('auth.login.verificationFailed')])
     } finally {
       setIsSubmitting(false)
     }
@@ -71,11 +73,9 @@ export function LoginPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-600/30">
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h1 className="mt-4 text-2xl">Two-factor verification</h1>
+            <h1 className="mt-4 text-2xl">{t('auth.login.twoFactorTitle')}</h1>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              {useRecoveryCode
-                ? 'Enter one of your recovery codes.'
-                : 'Enter the 6-digit code from your authenticator app.'}
+              {useRecoveryCode ? t('auth.login.twoFactorRecoveryPrompt') : t('auth.login.twoFactorCodePrompt')}
             </p>
 
             <form onSubmit={handleTwoFactorSubmit} noValidate className="mt-8 flex flex-col gap-4">
@@ -90,7 +90,7 @@ export function LoginPage() {
               )}
 
               <TextField
-                label={useRecoveryCode ? 'Recovery code' : 'Verification code'}
+                label={useRecoveryCode ? t('auth.login.recoveryCode') : t('auth.login.verificationCode')}
                 type="text"
                 autoComplete="one-time-code"
                 required
@@ -99,7 +99,7 @@ export function LoginPage() {
               />
 
               <Button type="submit" size="lg" isLoading={isSubmitting} className="mt-2">
-                {isSubmitting ? 'Verifying...' : 'Verify'}
+                {isSubmitting ? t('auth.login.verifying') : t('auth.login.verify')}
               </Button>
 
               <button
@@ -111,7 +111,7 @@ export function LoginPage() {
                 }}
                 className="self-center text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
               >
-                {useRecoveryCode ? 'Use an authenticator code instead' : 'Use a recovery code instead'}
+                {useRecoveryCode ? t('auth.login.useAuthenticatorCodeInstead') : t('auth.login.useRecoveryCodeInstead')}
               </button>
             </form>
           </>
@@ -120,11 +120,11 @@ export function LoginPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-600/30">
               <KeyRound className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h1 className="mt-4 text-2xl">Log in to DocuMind AI</h1>
+            <h1 className="mt-4 text-2xl">{t('auth.login.title')}</h1>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Don't have an account?{' '}
+              {t('auth.login.noAccount')}{' '}
               <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300">
-                Create one
+                {t('auth.login.createOne')}
               </Link>
             </p>
 
@@ -140,7 +140,7 @@ export function LoginPage() {
               )}
 
               <TextField
-                label="Email"
+                label={t('auth.login.email')}
                 type="email"
                 autoComplete="email"
                 required
@@ -149,7 +149,7 @@ export function LoginPage() {
               />
               <div className="flex flex-col gap-1.5">
                 <TextField
-                  label="Password"
+                  label={t('auth.login.password')}
                   type="password"
                   autoComplete="current-password"
                   required
@@ -160,12 +160,12 @@ export function LoginPage() {
                   to="/forgot-password"
                   className="self-end text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                 >
-                  Forgot password?
+                  {t('auth.login.forgotPassword')}
                 </Link>
               </div>
 
               <Button type="submit" size="lg" isLoading={isSubmitting} className="mt-2">
-                {isSubmitting ? 'Logging in...' : 'Log in'}
+                {isSubmitting ? t('auth.login.loggingIn') : t('auth.login.logIn')}
               </Button>
             </form>
           </>

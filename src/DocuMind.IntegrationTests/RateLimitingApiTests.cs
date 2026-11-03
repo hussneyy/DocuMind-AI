@@ -100,7 +100,10 @@ public class RateLimitingApiTests : IAsyncLifetime
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Rate Limit Test User",
+            firstName = "RateLimit",
+            lastName = "TestUser",
+            country = "US",
+            preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();
 

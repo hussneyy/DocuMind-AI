@@ -10,15 +10,17 @@ public class RegisterRequest
     [Required, MinLength(8), MaxLength(128)]
     public string Password { get; set; } = string.Empty;
 
-    [Required, MinLength(1), MaxLength(100)]
-    public string DisplayName { get; set; } = string.Empty;
+    [Required, MinLength(1), MaxLength(50)]
+    public string FirstName { get; set; } = string.Empty;
 
-    [MaxLength(280)]
-    public string? Bio { get; set; }
+    [Required, MinLength(1), MaxLength(50)]
+    public string LastName { get; set; } = string.Empty;
 
-    [MaxLength(100)]
-    public string? Location { get; set; }
+    /// <summary>ISO 3166-1 alpha-2 country code, e.g. "US", "GB".</summary>
+    [Required, RegularExpression("^[A-Z]{2}$")]
+    public string Country { get; set; } = string.Empty;
 
-    [MaxLength(30)]
-    public string? PhoneNumber { get; set; }
+    /// <summary>ISO 639-1 language code — one of "en", "es", "fr", "de".</summary>
+    [Required]
+    public string PreferredLanguage { get; set; } = "en";
 }

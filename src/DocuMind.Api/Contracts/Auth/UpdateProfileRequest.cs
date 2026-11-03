@@ -15,4 +15,9 @@ public class UpdateProfileRequest
 
     [MaxLength(30)]
     public string? PhoneNumber { get; set; }
+
+    [RegularExpression("^[A-Z]{2}$")]
+    public string? Country { get; set; }
+
+    public string? PreferredLanguage { get; set; }
 }

@@ -208,7 +208,10 @@ public class DocumentSummaryAndFileApiTests
         {
             email,
             password = "Sup3rSecret!1",
-            displayName = "Summary Test User",
+            firstName = "Summary",
+            lastName = "TestUser",
+            country = "US",
+            preferredLanguage = "en",
         });
         response.EnsureSuccessStatusCode();
 

@@ -1,10 +1,14 @@
 export interface CurrentUser {
   id: string
   email: string
+  firstName: string
+  lastName: string
   displayName: string
   createdAt: string
   bio: string | null
   location: string | null
+  country: string
+  preferredLanguage: string
   phoneNumber: string | null
   hasAvatar: boolean
   twoFactorEnabled: boolean
@@ -15,15 +19,17 @@ export interface UpdateProfileInput {
   bio?: string
   location?: string
   phoneNumber?: string
+  country?: string
+  preferredLanguage?: string
 }
 
 export interface RegisterInput {
   email: string
   password: string
-  displayName: string
-  bio?: string
-  location?: string
-  phoneNumber?: string
+  firstName: string
+  lastName: string
+  country: string
+  preferredLanguage: string
 }
 
 export interface ForgotPasswordResult {

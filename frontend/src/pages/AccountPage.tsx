@@ -8,7 +8,11 @@ import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/TextField'
 import { DeleteAccountDialog } from '../components/account/DeleteAccountDialog'
 import { TwoFactorSection } from '../components/account/TwoFactorSection'
+import { COUNTRIES } from '../data/countries'
+import { LANGUAGES } from '../i18n/translations'
+import type { Language } from '../i18n/translations'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
 import { extractErrorMessages } from '../lib/apiClient'
 import { formatDate } from '../lib/format'
@@ -16,6 +20,7 @@ import { formatDate } from '../lib/format'
 export function AccountPage() {
   const { user, avatarVersion, updateProfile, uploadAvatar, removeAvatar, deleteAccount } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { language, setLanguage } = useLanguage()
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
@@ -23,9 +28,11 @@ export function AccountPage() {
   const [bio, setBio] = useState(user?.bio ?? '')
   const [location, setLocation] = useState(user?.location ?? '')
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? '')
+  const [country, setCountry] = useState(user?.country ?? '')
   const [errors, setErrors] = useState<string[]>([])
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isSavingLanguage, setIsSavingLanguage] = useState(false)
 
   const [avatarErrors, setAvatarErrors] = useState<string[]>([])
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false)
@@ -33,11 +40,14 @@ export function AccountPage() {
 
   if (!user) return null
 
+  const currentDisplayName = user.displayName
+
   const isUnchanged =
     displayName.trim() === user.displayName &&
     bio.trim() === (user.bio ?? '') &&
     location.trim() === (user.location ?? '') &&
-    phoneNumber.trim() === (user.phoneNumber ?? '')
+    phoneNumber.trim() === (user.phoneNumber ?? '') &&
+    country === user.country
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -50,12 +60,26 @@ export function AccountPage() {
         bio: bio.trim(),
         location: location.trim(),
         phoneNumber: phoneNumber.trim(),
+        country,
       })
       setSuccessMessage('Your profile has been updated.')
     } catch (error) {
       setErrors(axios.isAxiosError(error) ? extractErrorMessages(error) : ['Failed to update profile.'])
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleLanguageChange(next: Language) {
+    setLanguage(next)
+    setIsSavingLanguage(true)
+    try {
+      await updateProfile({ displayName: currentDisplayName, preferredLanguage: next })
+    } catch {
+      // The UI language still switches even if persisting the preference fails — not worth
+      // blocking on, since it'll just be asked again (or re-saved) next time it's changed.
+    } finally {
+      setIsSavingLanguage(false)
     }
   }
 
@@ -232,6 +256,27 @@ export function AccountPage() {
             }}
           />
 
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="account-country" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Country
+            </label>
+            <select
+              id="account-country"
+              value={country}
+              onChange={(e) => {
+                setSuccessMessage(null)
+                setCountry(e.target.value)
+              }}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.dialCode} {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <Button type="submit" size="md" isLoading={isSaving} disabled={isUnchanged} className="self-start">
             {isSaving ? 'Saving...' : 'Save changes'}
           </Button>
@@ -268,6 +313,28 @@ export function AccountPage() {
               }`}
             />
           </button>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-100 pt-4 dark:border-slate-700">
+          <div>
+            <label htmlFor="account-language" className="text-sm font-medium text-slate-900 dark:text-white">
+              Language
+            </label>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Changes the app's language immediately.</p>
+          </div>
+          <select
+            id="account-language"
+            value={language}
+            disabled={isSavingLanguage}
+            onChange={(e) => handleLanguageChange(e.target.value as Language)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition-colors focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
