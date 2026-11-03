@@ -21,6 +21,9 @@ public interface IDocumentRepository
     Task<(IReadOnlyList<Document> Items, int TotalCount)> ListAsync(
         Guid ownerUserId, DocumentListQuery query, CancellationToken ct);
 
+    /// <summary>All of a user's documents, unpaginated — for account deletion cleanup, never for a listing UI.</summary>
+    Task<IReadOnlyList<Document>> GetAllForOwnerAsync(Guid ownerUserId, CancellationToken ct);
+
     void Remove(Document document);
 
     Task SaveChangesAsync(CancellationToken ct);

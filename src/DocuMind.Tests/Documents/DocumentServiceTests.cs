@@ -148,6 +148,8 @@ public class DocumentServiceTests
         public Task<(IReadOnlyList<Document> Items, int TotalCount)> ListAsync(Guid ownerUserId, DocumentListQuery query, CancellationToken ct) =>
             throw new NotSupportedException();
 
+        public Task<IReadOnlyList<Document>> GetAllForOwnerAsync(Guid ownerUserId, CancellationToken ct) => throw new NotSupportedException();
+
         public void Remove(Document document) => Removed.Add(document);
 
         public Task SaveChangesAsync(CancellationToken ct) => Task.CompletedTask;

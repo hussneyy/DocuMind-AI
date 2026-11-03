@@ -28,9 +28,42 @@ public class AuthController(IAuthService authService) : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
-    public async Task<ActionResult<CurrentUserDto>> Login(LoginRequest request, CancellationToken ct)
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
         var result = await authService.LoginAsync(request.Email, request.Password, ct);
+        if (result.RequiresTwoFactor)
+        {
+            return Ok(new { requiresTwoFactor = true });
+        }
+
+        if (!result.Succeeded)
+        {
+            return Unauthorized(new { errors = result.Errors });
+        }
+
+        return Ok(result.User);
+    }
+
+    [HttpPost("login/2fa")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> LoginWithTwoFactor(VerifyTwoFactorCodeRequest request, CancellationToken ct)
+    {
+        var result = await authService.LoginWithTwoFactorCodeAsync(request.Code, ct);
+        if (!result.Succeeded)
+        {
+            return Unauthorized(new { errors = result.Errors });
+        }
+
+        return Ok(result.User);
+    }
+
+    [HttpPost("login/2fa-recovery")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> LoginWithRecoveryCode(TwoFactorRecoveryLoginRequest request, CancellationToken ct)
+    {
+        var result = await authService.LoginWithRecoveryCodeAsync(request.RecoveryCode, ct);
         if (!result.Succeeded)
         {
             return Unauthorized(new { errors = result.Errors });
@@ -136,5 +169,53 @@ public class AuthController(IAuthService authService) : ControllerBase
         }
 
         return NoContent();
+    }
+
+    [HttpPost("me/delete")]
+    [Authorize]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> DeleteAccount(DeleteAccountRequest request, CancellationToken ct)
+    {
+        var result = await authService.DeleteAccountAsync(User.GetUserId(), request.Password, ct);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        return NoContent();
+    }
+
+    [HttpPost("2fa/setup")]
+    [Authorize]
+    public async Task<IActionResult> SetupTwoFactor(CancellationToken ct)
+    {
+        var result = await authService.GetTwoFactorSetupAsync(User.GetUserId(), ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("2fa/enable")]
+    [Authorize]
+    public async Task<IActionResult> EnableTwoFactor(VerifyTwoFactorCodeRequest request, CancellationToken ct)
+    {
+        var result = await authService.EnableTwoFactorAsync(User.GetUserId(), request.Code, ct);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        return Ok(new { recoveryCodes = result.RecoveryCodes });
+    }
+
+    [HttpPost("2fa/disable")]
+    [Authorize]
+    public async Task<IActionResult> DisableTwoFactor(DisableTwoFactorRequest request, CancellationToken ct)
+    {
+        var result = await authService.DisableTwoFactorAsync(User.GetUserId(), request.Password, ct);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors });
+        }
+
+        return Ok(result.User);
     }
 }

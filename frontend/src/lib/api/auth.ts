@@ -1,13 +1,26 @@
 import { apiClient } from '../apiClient'
-import type { CurrentUser, ForgotPasswordResult, UpdateProfileInput } from '../../types/api'
+import type { CurrentUser, ForgotPasswordResult, LoginResult, TwoFactorSetup, UpdateProfileInput } from '../../types/api'
 
 export async function register(email: string, password: string, displayName: string): Promise<CurrentUser> {
   const { data } = await apiClient.post<CurrentUser>('/auth/register', { email, password, displayName })
   return data
 }
 
-export async function login(email: string, password: string): Promise<CurrentUser> {
-  const { data } = await apiClient.post<CurrentUser>('/auth/login', { email, password })
+export async function login(email: string, password: string): Promise<LoginResult> {
+  const { data } = await apiClient.post<{ requiresTwoFactor?: boolean } & Partial<CurrentUser>>('/auth/login', { email, password })
+  if (data.requiresTwoFactor) {
+    return { requiresTwoFactor: true, user: null }
+  }
+  return { requiresTwoFactor: false, user: data as CurrentUser }
+}
+
+export async function loginWithTwoFactorCode(code: string): Promise<CurrentUser> {
+  const { data } = await apiClient.post<CurrentUser>('/auth/login/2fa', { code })
+  return data
+}
+
+export async function loginWithRecoveryCode(recoveryCode: string): Promise<CurrentUser> {
+  const { data } = await apiClient.post<CurrentUser>('/auth/login/2fa-recovery', { recoveryCode })
   return data
 }
 
@@ -50,6 +63,25 @@ export async function forgotPassword(email: string): Promise<ForgotPasswordResul
 
 export async function resetPassword(email: string, token: string, newPassword: string): Promise<void> {
   await apiClient.post('/auth/reset-password', { email, token, newPassword })
+}
+
+export async function deleteAccount(password: string): Promise<void> {
+  await apiClient.post('/auth/me/delete', { password })
+}
+
+export async function setupTwoFactor(): Promise<TwoFactorSetup> {
+  const { data } = await apiClient.post<TwoFactorSetup>('/auth/2fa/setup')
+  return data
+}
+
+export async function enableTwoFactor(code: string): Promise<string[]> {
+  const { data } = await apiClient.post<{ recoveryCodes: string[] }>('/auth/2fa/enable', { code })
+  return data.recoveryCodes
+}
+
+export async function disableTwoFactor(password: string): Promise<CurrentUser> {
+  const { data } = await apiClient.post<CurrentUser>('/auth/2fa/disable', { password })
+  return data
 }
 
 /** Resolves the same base URL axios is configured with, for use as a plain <img> src (not an axios call). */

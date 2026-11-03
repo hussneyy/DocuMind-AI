@@ -73,6 +73,11 @@ public class DocumentRepository(AppDbContext dbContext) : IDocumentRepository
         return (items, totalCount);
     }
 
+    public async Task<IReadOnlyList<Document>> GetAllForOwnerAsync(Guid ownerUserId, CancellationToken ct)
+    {
+        return await dbContext.Documents.Where(d => d.OwnerUserId == ownerUserId).ToListAsync(ct);
+    }
+
     public void Remove(Document document)
     {
         dbContext.Documents.Remove(document);

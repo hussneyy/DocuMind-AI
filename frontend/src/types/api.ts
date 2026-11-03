@@ -7,6 +7,7 @@ export interface CurrentUser {
   location: string | null
   phoneNumber: string | null
   hasAvatar: boolean
+  twoFactorEnabled: boolean
 }
 
 export interface UpdateProfileInput {
@@ -19,6 +20,16 @@ export interface UpdateProfileInput {
 export interface ForgotPasswordResult {
   accountExists: boolean
   resetLink: string | null
+}
+
+export interface LoginResult {
+  requiresTwoFactor: boolean
+  user: CurrentUser | null
+}
+
+export interface TwoFactorSetup {
+  sharedKey: string
+  authenticatorUri: string
 }
 
 export const DocumentProcessingStatus = {

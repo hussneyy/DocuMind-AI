@@ -16,4 +16,7 @@ public enum AuditEventType
     PasswordResetCompleted,
     TagCreated,
     TagDeleted,
+    AccountDeleted,
+    TwoFactorEnabled,
+    TwoFactorDisabled,
 }

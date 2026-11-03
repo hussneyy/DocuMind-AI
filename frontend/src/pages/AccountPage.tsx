@@ -6,14 +6,18 @@ import { Alert } from '../components/ui/Alert'
 import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/TextField'
+import { DeleteAccountDialog } from '../components/account/DeleteAccountDialog'
+import { TwoFactorSection } from '../components/account/TwoFactorSection'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { extractErrorMessages } from '../lib/apiClient'
 import { formatDate } from '../lib/format'
 
 export function AccountPage() {
-  const { user, avatarVersion, updateProfile, uploadAvatar, removeAvatar } = useAuth()
+  const { user, avatarVersion, updateProfile, uploadAvatar, removeAvatar, deleteAccount } = useAuth()
   const { theme, toggleTheme } = useTheme()
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '')
   const [bio, setBio] = useState(user?.bio ?? '')
@@ -77,6 +81,13 @@ export function AccountPage() {
     } finally {
       setIsUpdatingAvatar(false)
     }
+  }
+
+  async function handleConfirmDeleteAccount(password: string) {
+    await deleteAccount(password)
+    // No explicit navigate: clearing the user here makes ProtectedRoute redirect to /login on its
+    // own (the same path any other loss of session takes), which also avoids a render race between
+    // that redirect and a manual navigate() call.
   }
 
   return (
@@ -259,6 +270,35 @@ export function AccountPage() {
           </button>
         </div>
       </div>
+
+      <TwoFactorSection user={user} />
+
+      <div className="animate-fade-in-up mt-6 rounded-2xl border border-red-200 bg-red-50/50 p-6 dark:border-red-500/30 dark:bg-red-500/5">
+        <h2 className="text-lg text-red-900 dark:text-red-400">Danger zone</h2>
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">Delete account</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Permanently delete your account, documents, and conversations.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="!border-red-300 !text-red-700 hover:!bg-red-100 dark:!border-red-500/40 dark:!text-red-400 dark:hover:!bg-red-500/10"
+          >
+            Delete account
+          </Button>
+        </div>
+      </div>
+
+      <DeleteAccountDialog
+        isOpen={isDeleteDialogOpen}
+        onConfirm={handleConfirmDeleteAccount}
+        onCancel={() => setIsDeleteDialogOpen(false)}
+      />
     </main>
   )
 }

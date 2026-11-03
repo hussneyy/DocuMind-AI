@@ -8,4 +8,5 @@ public record CurrentUserDto(
     string? Bio,
     string? Location,
     string? PhoneNumber,
-    bool HasAvatar);
+    bool HasAvatar,
+    bool TwoFactorEnabled);
