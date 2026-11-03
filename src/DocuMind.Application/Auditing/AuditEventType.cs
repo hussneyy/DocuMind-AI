@@ -9,7 +9,11 @@ public enum AuditEventType
     DocumentUploaded,
     DocumentDeleted,
     ConversationDeleted,
-    DisplayNameChanged,
+    ProfileUpdated,
+    AvatarUpdated,
+    AvatarRemoved,
+    PasswordResetRequested,
+    PasswordResetCompleted,
     TagCreated,
     TagDeleted,
 }

@@ -78,7 +78,7 @@ public class DocumentService(
         var hashBytes = await SHA256.HashDataAsync(buffer, ct);
         buffer.Position = 0;
 
-        var storageKey = await fileStorage.SaveAsync(buffer, ct);
+        var storageKey = await fileStorage.SaveAsync(buffer, ".pdf", ct);
 
         var document = new Document
         {

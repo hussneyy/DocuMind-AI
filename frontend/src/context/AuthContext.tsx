@@ -1,15 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import * as authApi from '../lib/api/auth'
-import type { CurrentUser } from '../types/api'
+import type { CurrentUser, UpdateProfileInput } from '../types/api'
 
 interface AuthContextValue {
   user: CurrentUser | null
   isLoading: boolean
+  /** Bumped every time the avatar changes, so <img> consumers can cache-bust the URL. */
+  avatarVersion: number
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, displayName: string) => Promise<void>
   logout: () => Promise<void>
-  updateDisplayName: (displayName: string) => Promise<void>
+  updateProfile: (input: UpdateProfileInput) => Promise<void>
+  uploadAvatar: (file: File) => Promise<void>
+  removeAvatar: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -17,6 +21,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [avatarVersion, setAvatarVersion] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -46,13 +51,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
-  const updateDisplayName = useCallback(async (displayName: string) => {
-    const currentUser = await authApi.updateDisplayName(displayName)
+  const updateProfile = useCallback(async (input: UpdateProfileInput) => {
+    const currentUser = await authApi.updateProfile(input)
     setUser(currentUser)
   }, [])
 
+  const uploadAvatar = useCallback(async (file: File) => {
+    const currentUser = await authApi.uploadAvatar(file)
+    setUser(currentUser)
+    setAvatarVersion((v) => v + 1)
+  }, [])
+
+  const removeAvatar = useCallback(async () => {
+    const currentUser = await authApi.removeAvatar()
+    setUser(currentUser)
+    setAvatarVersion((v) => v + 1)
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateDisplayName }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, avatarVersion, login, register, logout, updateProfile, uploadAvatar, removeAvatar }}
+    >
       {children}
     </AuthContext.Provider>
   )

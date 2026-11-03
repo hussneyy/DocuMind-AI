@@ -102,7 +102,7 @@ public class DocumentServiceTests
 
     private sealed class FakeFileStorage : IFileStorage
     {
-        public Task<string> SaveAsync(Stream content, CancellationToken ct) => Task.FromResult("key123");
+        public Task<string> SaveAsync(Stream content, string fileExtension, CancellationToken ct) => Task.FromResult("key123");
 
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken ct) => throw new NotSupportedException();
 

@@ -3,6 +3,22 @@ export interface CurrentUser {
   email: string
   displayName: string
   createdAt: string
+  bio: string | null
+  location: string | null
+  phoneNumber: string | null
+  hasAvatar: boolean
+}
+
+export interface UpdateProfileInput {
+  displayName: string
+  bio?: string
+  location?: string
+  phoneNumber?: string
+}
+
+export interface ForgotPasswordResult {
+  accountExists: boolean
+  resetLink: string | null
 }
 
 export const DocumentProcessingStatus = {

@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using DocuMind.Application.Auth;
 
 namespace DocuMind.IntegrationTests;
@@ -165,6 +167,171 @@ public class AuthApiTests
         var patchResponse = await client.PatchAsJsonAsync("/api/auth/me", new { displayName = "" });
         Assert.Equal(HttpStatusCode.BadRequest, patchResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task UpdateProfile_WithBioLocationAndPhoneNumber_PersistsAllFields()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
+            new { email, password = "Sup3rSecret!1", displayName = "Original Name" });
+        registerResponse.EnsureSuccessStatusCode();
+        AttachAuthCookie(client, registerResponse);
+
+        var patchResponse = await client.PatchAsJsonAsync("/api/auth/me", new
+        {
+            displayName = "Original Name",
+            bio = "Building things with PDFs.",
+            location = "Berlin",
+            phoneNumber = "+49 123 4567",
+        });
+        patchResponse.EnsureSuccessStatusCode();
+        var patched = await patchResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+
+        Assert.Equal("Building things with PDFs.", patched!.Bio);
+        Assert.Equal("Berlin", patched.Location);
+        Assert.Equal("+49 123 4567", patched.PhoneNumber);
+
+        var meResponse = await client.GetAsync("/api/auth/me");
+        var me = await meResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+        Assert.Equal("Building things with PDFs.", me!.Bio);
+    }
+
+    [Fact]
+    public async Task UploadAvatar_ThenGetAndDelete_RoundTripsCorrectly()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
+            new { email, password = "Sup3rSecret!1", displayName = "Avatar Tester" });
+        registerResponse.EnsureSuccessStatusCode();
+        AttachAuthCookie(client, registerResponse);
+
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(OnePixelPngBytes());
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        content.Add(fileContent, "file", "avatar.png");
+
+        var uploadResponse = await client.PostAsync("/api/auth/me/avatar", content);
+        uploadResponse.EnsureSuccessStatusCode();
+        var afterUpload = await uploadResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+        Assert.True(afterUpload!.HasAvatar);
+
+        var getResponse = await client.GetAsync("/api/auth/me/avatar");
+        getResponse.EnsureSuccessStatusCode();
+        Assert.Equal("image/png", getResponse.Content.Headers.ContentType?.MediaType);
+
+        var deleteResponse = await client.DeleteAsync("/api/auth/me/avatar");
+        deleteResponse.EnsureSuccessStatusCode();
+        var afterDelete = await deleteResponse.Content.ReadFromJsonAsync<CurrentUserDto>();
+        Assert.False(afterDelete!.HasAvatar);
+
+        var getAfterDelete = await client.GetAsync("/api/auth/me/avatar");
+        Assert.Equal(HttpStatusCode.NotFound, getAfterDelete.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadAvatar_RejectsAFileThatIsNotActuallyAnImage()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
+            new { email, password = "Sup3rSecret!1", displayName = "Avatar Tester" });
+        registerResponse.EnsureSuccessStatusCode();
+        AttachAuthCookie(client, registerResponse);
+
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent("this is definitely not an image"u8.ToArray());
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        content.Add(fileContent, "file", "fake.png");
+
+        var response = await client.PostAsync("/api/auth/me/avatar", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_ThenResetPassword_AllowsLoggingInWithTheNewPassword()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
+            new { email, password = "Sup3rSecret!1", displayName = "Reset Tester" });
+        registerResponse.EnsureSuccessStatusCode();
+
+        var forgotResponse = await client.PostAsJsonAsync("/api/auth/forgot-password", new { email });
+        forgotResponse.EnsureSuccessStatusCode();
+        var forgotBody = await forgotResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(forgotBody.GetProperty("accountExists").GetBoolean());
+        var resetLink = forgotBody.GetProperty("resetLink").GetString();
+        Assert.NotNull(resetLink);
+
+        var uri = new Uri(resetLink!);
+        var queryParams = uri.Query.TrimStart('?').Split('&')
+            .Select(p => p.Split('=', 2))
+            .ToDictionary(p => Uri.UnescapeDataString(p[0]), p => Uri.UnescapeDataString(p[1]));
+        var token = queryParams["token"];
+        Assert.NotNull(token);
+
+        var resetResponse = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token,
+            newPassword = "BrandNewSecret!2",
+        });
+        Assert.Equal(HttpStatusCode.NoContent, resetResponse.StatusCode);
+
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new { email, password = "BrandNewSecret!2" });
+        loginResponse.EnsureSuccessStatusCode();
+
+        var oldPasswordLogin = await client.PostAsJsonAsync("/api/auth/login", new { email, password = "Sup3rSecret!1" });
+        Assert.Equal(HttpStatusCode.Unauthorized, oldPasswordLogin.StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_WithAnUnknownEmail_StillReturns200ButWithNoResetLink()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+
+        var response = await client.PostAsJsonAsync("/api/auth/forgot-password", new { email = $"nobody-{Guid.NewGuid():N}@example.com" });
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        Assert.False(body.GetProperty("accountExists").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("resetLink").ValueKind);
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithAnInvalidToken_IsRejected()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "IntegrationTests");
+        var email = $"user-{Guid.NewGuid():N}@example.com";
+
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
+            new { email, password = "Sup3rSecret!1", displayName = "Reset Tester" });
+        registerResponse.EnsureSuccessStatusCode();
+
+        var response = await client.PostAsJsonAsync("/api/auth/reset-password", new
+        {
+            email,
+            token = "not-a-real-token",
+            newPassword = "BrandNewSecret!2",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    private static byte[] OnePixelPngBytes() => Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
     private static void AttachAuthCookie(HttpClient client, HttpResponseMessage response)
     {

@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { LogOut, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Avatar } from '../ui/Avatar'
 import type { CurrentUser } from '../../types/api'
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  const first = parts[0]?.[0] ?? ''
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
-  return (first + last).toUpperCase() || '?'
-}
-
-export function ProfileMenu({ user, onLogout }: { user: CurrentUser; onLogout: () => void }) {
+export function ProfileMenu({
+  user,
+  avatarVersion,
+  onLogout,
+}: {
+  user: CurrentUser
+  avatarVersion: number
+  onLogout: () => void
+}) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -42,9 +44,7 @@ export function ProfileMenu({ user, onLogout }: { user: CurrentUser; onLogout: (
         aria-expanded={isOpen}
         className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">
-          {initialsOf(user.displayName)}
-        </span>
+        <Avatar user={user} avatarVersion={avatarVersion} size="sm" />
         <span className="hidden max-w-[10rem] truncate text-sm font-medium text-slate-700 dark:text-slate-300 lg:inline">
           {user.displayName}
         </span>

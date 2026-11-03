@@ -69,14 +69,22 @@ export function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <TextField
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="flex flex-col gap-1.5">
+            <TextField
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Link
+              to="/forgot-password"
+              className="self-end text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           <Button type="submit" size="lg" isLoading={isSubmitting} className="mt-2">
             {isSubmitting ? 'Logging in...' : 'Log in'}

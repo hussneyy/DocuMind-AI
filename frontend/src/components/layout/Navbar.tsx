@@ -13,7 +13,7 @@ const AUTHED_LINKS = [
 ]
 
 export function Navbar() {
-  const { user, logout } = useAuth()
+  const { user, logout, avatarVersion } = useAuth()
   const navigate = useNavigate()
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -98,7 +98,7 @@ export function Navbar() {
                 ))}
               </div>
               <ThemeToggle />
-              <ProfileMenu user={user} onLogout={handleLogout} />
+              <ProfileMenu user={user} avatarVersion={avatarVersion} onLogout={handleLogout} />
             </>
           ) : (
             <>
