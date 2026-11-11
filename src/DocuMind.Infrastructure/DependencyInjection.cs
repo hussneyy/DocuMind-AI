@@ -56,8 +56,19 @@ public static class DependencyInjection
         services.AddScoped<ITagRepository, TagRepository>();
         services.AddSingleton<IAmazonS3>(sp =>
         {
-            var region = sp.GetRequiredService<IOptions<StorageOptions>>().Value.Region;
-            return new AmazonS3Client(Amazon.RegionEndpoint.GetBySystemName(region));
+            var options = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
+
+            // A non-empty ServiceUrl means an S3-compatible provider other than AWS itself (e.g.
+            // Cloudflare R2), which has no EC2-instance-role equivalent and so needs explicit
+            // credentials, plus path-style requests (R2 doesn't support virtual-hosted-style).
+            if (!string.IsNullOrEmpty(options.ServiceUrl))
+            {
+                var credentials = new Amazon.Runtime.BasicAWSCredentials(options.AccessKeyId, options.SecretAccessKey);
+                var config = new AmazonS3Config { ServiceURL = options.ServiceUrl, ForcePathStyle = true };
+                return new AmazonS3Client(credentials, config);
+            }
+
+            return new AmazonS3Client(Amazon.RegionEndpoint.GetBySystemName(options.Region));
         });
         services.AddSingleton<IFileStorage>(sp =>
         {
