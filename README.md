@@ -679,9 +679,14 @@ what's deliberately still missing.
 
 ## AWS deployment
 
-The app also deploys to AWS with every piece of infrastructure defined in Terraform — nothing
-created by hand in the console. This is a separate, optional path from the Docker Compose
-quickstart above; use that for local development and this for a real deployed demo.
+> **Status: infrastructure-as-code is complete and validated (`terraform fmt`/`validate` pass),
+> but has not been applied to a live AWS account** — this repository demonstrates the full
+> deployment design without an account actually being created or billed. Everything below
+> describes what running it would do; see [infra/](infra/) to read or extend the actual Terraform.
+
+Every piece of infrastructure needed to run the app on AWS is defined in Terraform — nothing would
+be created by hand in the console. This is a separate, optional path from the Docker Compose
+quickstart above, which remains the way to actually run and verify the app locally.
 
 ### Architecture
 
@@ -797,18 +802,22 @@ terraform destroy
 
 ## CV bullet points
 
-- Designed and deployed a full-stack RAG document-search app (ASP.NET Core 10, React/TypeScript,
-  PostgreSQL+pgvector) to AWS with 100% Terraform infrastructure-as-code — VPC, EC2, RDS, S3,
-  CloudFront, ECR — staying within the AWS Free Tier by choosing a single EC2 instance over App
-  Runner/ECS+ALB and eliminating the NAT Gateway, the two most common cost traps in portfolio
-  deployments.
+- Designed and authored a complete AWS deployment in Terraform for a full-stack RAG
+  document-search app (ASP.NET Core 10, React/TypeScript, PostgreSQL+pgvector) — VPC, EC2, RDS,
+  S3, CloudFront, ECR — architected to stay within the AWS Free Tier by choosing a single EC2
+  instance over App Runner/ECS+ALB and eliminating the NAT Gateway, the two most common cost traps
+  in portfolio deployments.
 - Built a GitHub Actions CI/CD pipeline that authenticates to AWS via OpenID Connect (no stored
   access keys), running `terraform plan` on every pull request and a scoped build-and-deploy
-  workflow on merge to `main`, with secrets (DB password, API keys) in SSM Parameter Store rather
-  than application code or CI config.
+  workflow on merge to `main`, with secrets (DB password, API keys) designed to live in SSM
+  Parameter Store rather than application code or CI config.
 - Implemented a provider-swappable file storage layer (local disk for dev, S3 in production)
-  behind a single interface, and wired redeploys through AWS Systems Manager Run Command instead
-  of SSH, removing the need for any inbound port beyond HTTP on the API host.
+  behind a single interface, and designed redeploys to go through AWS Systems Manager Run Command
+  instead of SSH, removing the need for any inbound port beyond HTTP on the API host.
+
+*(This infrastructure is written, validated with `terraform validate`/`plan`, and ready to apply,
+but has not been run against a live AWS account — phrase accordingly if asked directly, e.g. "built
+the IaC for" rather than "operates in production.")*
 
 ## Interview questions about this setup
 
