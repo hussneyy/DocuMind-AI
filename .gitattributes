@@ -7,3 +7,11 @@
 *.jpg binary
 *.jpeg binary
 *.ico binary
+
+# Scripts that run on Linux (the EC2 instance, GitHub Actions' ubuntu-latest runners, Docker
+# Linux containers) must keep LF endings regardless of this being a Windows dev machine —
+# CRLF in a bash script's shebang or commands breaks it in ways that are easy to miss until
+# it's actually running.
+*.sh text eol=lf
+*.sh.tpl text eol=lf
+Dockerfile text eol=lf
