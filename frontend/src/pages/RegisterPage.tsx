@@ -38,6 +38,11 @@ export function RegisterPage() {
       return
     }
 
+    if (!phoneDigits.trim()) {
+      setErrors([t('auth.register.phoneNumberRequired')])
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const phoneNumber = `${dialCode} ${phoneDigits.trim()}`.trim()
