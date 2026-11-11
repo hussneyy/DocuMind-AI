@@ -20,6 +20,7 @@ param(
     [string]$FirstName = "Demo",
     [string]$LastName = "User",
     [string]$Country = "US",
+    [string]$PhoneNumber = "+1 5550100000",
     [string]$PreferredLanguage = "en"
 )
 
@@ -36,6 +37,7 @@ $registerBody = @{
     firstName = $FirstName
     lastName = $LastName
     country = $Country
+    phoneNumber = $PhoneNumber
     preferredLanguage = $PreferredLanguage
 } | ConvertTo-Json
 $headers = @{ "X-Requested-With" = "DocuMindSeedScript"; "Content-Type" = "application/json" }

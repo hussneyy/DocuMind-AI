@@ -677,6 +677,77 @@ security hardening → deployment & portfolio readiness. See
 major design decisions made along the way, and [Known limitations](#known-limitations) above for
 what's deliberately still missing.
 
+## AWS deployment
+
+The app also deploys to AWS with every piece of infrastructure defined in Terraform — nothing
+created by hand in the console. This is a separate, optional path from the Docker Compose
+quickstart above; use that for local development and this for a real deployed demo.
+
+### Architecture
+
+```mermaid
+flowchart TB
+    GH[GitHub Actions] -->|OIDC, no long-lived keys| IAM[IAM deploy role]
+    IAM --> ECR[(ECR: api image)]
+    IAM --> S3F[(S3: frontend build)]
+    IAM --> SSM[SSM Run Command]
+
+    S3F --> CF[CloudFront]
+    CF --> Browser
+
+    SSM -->|docker pull + run| EC2[EC2 t3.micro]
+    Browser -->|HTTP| EC2
+    EC2 --> RDS[(RDS PostgreSQL + pgvector)]
+    EC2 --> S3P[(S3: uploaded PDFs)]
+    EC2 -.reads secrets.-> Param[SSM Parameter Store]
+```
+
+A single EC2 instance runs the API container directly (no ALB, no ECS) — the only compute option
+that's actually Free Tier eligible; see [infra/](infra/) for the full cost breakdown and the
+reasoning behind every other choice (no NAT Gateway, SSM instead of SSH, Parameter Store instead
+of Secrets Manager).
+
+### One-time setup
+
+1. **Create the Terraform state backend** (run once, ever) — see [infra/bootstrap/README.md](infra/bootstrap/README.md).
+2. **Point `infra/versions.tf`'s backend block at the bucket that created.**
+3. **Copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars`** and fill in globally-unique S3 bucket names and your OpenAI API key.
+4. **Apply the infrastructure:**
+   ```powershell
+   cd infra
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+5. **Wire up GitHub**, using the `terraform output` values:
+   - Repository secrets: `AWS_PLAN_ROLE_ARN`, `AWS_DEPLOY_ROLE_ARN`, `OPENAI_API_KEY`
+   - Repository variables: `EC2_INSTANCE_ID`, `FRONTEND_BUCKET_NAME`, `STORAGE_BUCKET_NAME`, `CLOUDFRONT_DISTRIBUTION_ID`, `API_BASE_URL` (the `api_url` output, with `/api` appended)
+6. **Push to `main`** — `.github/workflows/deploy.yml` builds the API image, pushes it to ECR,
+   redeploys it on the EC2 instance via SSM, builds the frontend, and syncs it to S3 + CloudFront.
+7. Open the `frontend_url` Terraform output in a browser.
+
+Every pull request that touches `infra/` automatically gets a `terraform plan` posted as a PR
+comment via `.github/workflows/terraform-plan.yml`, so infrastructure changes are reviewable
+before they're ever applied.
+
+### Tearing it down
+
+```powershell
+cd infra
+terraform destroy
+```
+
+This removes every resource the main config created (EC2, RDS, S3 buckets, CloudFront, IAM
+roles, etc.) — but **not** the state bucket/lock table from `bootstrap/`, since that's a separate
+state file. Empty and delete those manually (or `terraform destroy` inside `infra/bootstrap/`) if
+you want nothing left at all:
+
+```powershell
+aws s3 rm s3://<your-state-bucket> --recursive
+cd infra/bootstrap
+terraform destroy
+```
+
 ## Troubleshooting
 
 - **`/health/ready` returns unhealthy / API fails to start with a connection error** — confirm
@@ -723,6 +794,53 @@ what's deliberately still missing.
   stack's address (`http://localhost:8080/api`); if the stack isn't running yet, start it first
   (`docker compose up -d --build`). Against local `dotnet run`/`npm run dev` instead, pass
   `-BaseUrl http://localhost:5180/api`.
+
+## CV bullet points
+
+- Designed and deployed a full-stack RAG document-search app (ASP.NET Core 10, React/TypeScript,
+  PostgreSQL+pgvector) to AWS with 100% Terraform infrastructure-as-code — VPC, EC2, RDS, S3,
+  CloudFront, ECR — staying within the AWS Free Tier by choosing a single EC2 instance over App
+  Runner/ECS+ALB and eliminating the NAT Gateway, the two most common cost traps in portfolio
+  deployments.
+- Built a GitHub Actions CI/CD pipeline that authenticates to AWS via OpenID Connect (no stored
+  access keys), running `terraform plan` on every pull request and a scoped build-and-deploy
+  workflow on merge to `main`, with secrets (DB password, API keys) in SSM Parameter Store rather
+  than application code or CI config.
+- Implemented a provider-swappable file storage layer (local disk for dev, S3 in production)
+  behind a single interface, and wired redeploys through AWS Systems Manager Run Command instead
+  of SSH, removing the need for any inbound port beyond HTTP on the API host.
+
+## Interview questions about this setup
+
+**Q: Why EC2 instead of App Runner or ECS Fargate for the API?**
+App Runner has no Free Tier at all (roughly $25-50/month minimum), and Fargate needs an
+Application Load Balancer just to route traffic — about $16/month by itself. A single EC2
+t3.micro is the only compute option that's actually Free Tier eligible for 12 months, and a
+single-container app doesn't need the orchestration ECS/Fargate adds.
+
+**Q: How does GitHub Actions authenticate to AWS, and why not just use access keys?**
+Via OpenID Connect. GitHub mints a short-lived token scoped to this specific repo and branch; an
+IAM OIDC identity provider exchanges it for temporary credentials via
+`sts:AssumeRoleWithWebIdentity`. There's no long-lived access key sitting in a GitHub secret that
+could leak or need manual rotation, and the trust policy itself restricts which repo/branch can
+even request the exchange — the plan role only trusts pull-request runs, the deploy role only
+trusts pushes to `main`.
+
+**Q: Why no NAT Gateway, if RDS is in a private subnet?**
+A NAT Gateway gives private-subnet resources outbound internet access, which RDS never needs
+here — it only talks to the EC2 instance over the VPC's internal routing. Skipping it also skips
+roughly $32/month, which would otherwise be the single biggest line item in the whole stack.
+
+**Q: How does Terraform state stay consistent if you and CI both run `apply`?**
+State lives in a versioned, encrypted S3 bucket rather than on anyone's laptop, and a DynamoDB
+table provides locking — whoever runs `apply` first acquires the lock, and a second run waits
+instead of racing and corrupting the state file.
+
+**Q: Where do secrets like the DB password and OpenAI key live?**
+SSM Parameter Store, as SecureStrings. The EC2 instance's IAM role can read only those two
+specific parameters by ARN, and the deploy script fetches them at container-start time — they're
+never baked into the Docker image, a GitHub secret the app itself consumes, or committed to the
+repo.
 
 ## License and attribution
 

@@ -46,7 +46,7 @@ POST /api/auth/register
 Content-Type: application/json
 X-Requested-With: DocuMindClient
 
-{ "email": "ada@example.com", "password": "correct horse battery staple1", "firstName": "Ada", "lastName": "Lovelace", "country": "GB", "preferredLanguage": "en" }
+{ "email": "ada@example.com", "password": "correct horse battery staple1", "firstName": "Ada", "lastName": "Lovelace", "country": "GB", "phoneNumber": "+44 7911123456", "preferredLanguage": "en" }
 ```
 
 ```http

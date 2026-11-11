@@ -1,3 +1,4 @@
+using Amazon.S3;
 using DocuMind.Application.Auditing;
 using DocuMind.Application.Auth;
 using DocuMind.Application.Chat;
@@ -53,7 +54,18 @@ public static class DependencyInjection
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<ISummaryRepository, SummaryRepository>();
         services.AddScoped<ITagRepository, TagRepository>();
-        services.AddSingleton<IFileStorage, LocalFileStorage>();
+        services.AddSingleton<IAmazonS3>(sp =>
+        {
+            var region = sp.GetRequiredService<IOptions<StorageOptions>>().Value.Region;
+            return new AmazonS3Client(Amazon.RegionEndpoint.GetBySystemName(region));
+        });
+        services.AddSingleton<IFileStorage>(sp =>
+        {
+            var storageOptions = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
+            return storageOptions.Provider.Equals("S3", StringComparison.OrdinalIgnoreCase)
+                ? ActivatorUtilities.CreateInstance<S3FileStorage>(sp)
+                : ActivatorUtilities.CreateInstance<LocalFileStorage>(sp);
+        });
         services.AddScoped<IPdfInspector, PdfPigInspector>();
         services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
 

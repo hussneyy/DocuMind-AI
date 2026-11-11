@@ -1,0 +1,14 @@
+# Copy this file to terraform.tfvars (gitignored — see infra/.gitignore) and fill in real values.
+# Never commit terraform.tfvars itself.
+
+frontend_bucket_name = "documind-ai-frontend-CHANGE-ME"
+storage_bucket_name  = "documind-ai-storage-CHANGE-ME"
+
+# Get one at https://platform.openai.com/api-keys. Billed per token, outside AWS entirely.
+openai_api_key = "sk-CHANGE-ME"
+
+# Defaults below are already set in variables.tf — override only if you want something different.
+# region              = "us-east-1"
+# github_repo         = "hussneyy/DocuMind-AI"
+# budget_alert_email  = "Hussna.alee2512@gmail.com"
+# budget_limit_usd    = 5

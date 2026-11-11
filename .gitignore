@@ -485,9 +485,12 @@ $RECYCLE.BIN/
 ## DocuMind AI project-specific
 ##
 
-# Local private document storage (never commit uploaded files)
-storage/
-uploads/
+# Local private document storage (never commit uploaded files) — anchored to specific real
+# runtime paths, not a bare "storage/", since that also matched src/DocuMind.Infrastructure/Storage/
+# (the source code folder) on this filesystem's case-insensitive matching.
+/storage/
+src/DocuMind.Api/storage/
+/uploads/
 
 # Local environment overrides (.env.example is committed, real .env files are not)
 .env.local

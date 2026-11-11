@@ -9,6 +9,7 @@ docs/
 *.md
 .git/
 .github/
+infra/
 .env
 .env.local
 storage/
