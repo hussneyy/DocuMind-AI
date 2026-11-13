@@ -26,10 +26,12 @@ resource "render_web_service" "api" {
     # service restarts (after ~15 min idle). Fine for a live demo you drive yourself; not meant
     # to hold onto files long-term. See the README for this called out explicitly.
 
-    Embedding__Provider = { value = "OpenAI" }
-    Embedding__ApiKey   = { value = var.openai_api_key }
-    Llm__Provider       = { value = "OpenAI" }
-    Llm__ApiKey         = { value = var.openai_api_key }
+    # Mock by default — needs no OpenAI account, no key, no per-use cost, and the full RAG
+    # pipeline (upload, chunking, search, chat, citations) works end-to-end against it, just with
+    # synthetic embeddings/answers instead of real ones. Set openai_api_key in terraform.tfvars
+    # and change both Provider values below to "OpenAI" if you want the real thing later.
+    Embedding__Provider = { value = "Mock" }
+    Llm__Provider       = { value = "Mock" }
 
     Cors__AllowedOrigins__0 = { value = var.cors_allowed_origin }
   }

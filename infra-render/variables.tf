@@ -21,9 +21,10 @@ variable "github_branch" {
 }
 
 variable "openai_api_key" {
-  description = "OpenAI API key. Never committed — pass via TF_VAR_openai_api_key or a gitignored terraform.tfvars."
+  description = "OpenAI API key. Not referenced by default — web_service.tf runs the app on the Mock AI provider, which needs no key. Kept here, unused, for whoever later wants to switch web_service.tf's env_vars to the real OpenAI provider; never commit a real value here."
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "cors_allowed_origin" {

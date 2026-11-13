@@ -780,7 +780,7 @@ GitHub Actions to do that work). `.github/workflows/terraform-plan-render.yml` s
 `fmt`/`validate`/`plan` on pull requests touching `infra-render/`, for the same reviewability
 reason as the AWS one.
 
-Three honest caveats, not glossed over:
+Four honest caveats, not glossed over:
 - **Free Render Postgres expires 30 days after creation** (confirmed from Render's own
   changelog), with a 14-day grace period before data loss. Recreating it is just `terraform
   apply` again — but it's a real recurring chore, not a "set and forget" database.
@@ -793,6 +793,11 @@ Three honest caveats, not glossed over:
 - **Free web services spin down after 15 minutes of inactivity** and take about a minute to wake
   back up on the next request — expect a cold-start delay the first time you (or an interviewer)
   open the link after it's been idle.
+- **Runs on the Mock AI provider**, not real OpenAI — a third account with its own billing wasn't
+  worth adding on top of everything above. The full pipeline (upload, search, chat, citations)
+  still works end-to-end, just with synthetic embeddings/answers instead of real ones. Set
+  `openai_api_key` in `terraform.tfvars` and flip `web_service.tf`'s two `Provider` values to
+  `"OpenAI"` if you want the real thing.
 
 ### One-time setup
 
@@ -800,8 +805,7 @@ Three honest caveats, not glossed over:
    → "Web Service"**, connect your GitHub account and give Render access to this repo — that's
    the one-time OAuth step Terraform can't do for you.
 2. **Generate a Render API key** at dashboard.render.com/u/settings#api-keys.
-3. **Fill in `infra-render/terraform.tfvars`** from `terraform.tfvars.example` (just your OpenAI
-   key to start).
+3. **Copy `infra-render/terraform.tfvars.example` to `terraform.tfvars`** — nothing to fill in yet.
 4. **Apply:**
    ```powershell
    $env:RENDER_API_KEY = "..."

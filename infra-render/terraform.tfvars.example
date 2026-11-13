@@ -1,10 +1,12 @@
 # Copy to terraform.tfvars (gitignored) and fill in real values. Never commit terraform.tfvars.
 
-# Get one at https://platform.openai.com/api-keys. Billed per token, outside Render entirely.
-openai_api_key = "sk-CHANGE_ME"
+# Runs on the Mock AI provider by default (see web_service.tf) — no OpenAI key, no account,
+# no per-use cost. openai_api_key below is optional and unused unless you edit web_service.tf's
+# Embedding__Provider/Llm__Provider to "OpenAI" yourself.
+# openai_api_key = "sk-CHANGE_ME"
 
-# Leave as the placeholder on your FIRST apply, then set to the real frontend_url output and
-# apply again — see variables.tf's cors_allowed_origin for why.
+# Leave unset (or as a placeholder) on your FIRST apply, then set to the real frontend_url output
+# and apply again — see variables.tf's cors_allowed_origin for why.
 # cors_allowed_origin = "https://documind-ai-frontend.onrender.com"
 
 # Defaults below are already set in variables.tf — override only if you want something different.
