@@ -1,14 +1,7 @@
 # Copy to terraform.tfvars (gitignored) and fill in real values. Never commit terraform.tfvars.
 
-cloudflare_account_id = "CHANGE_ME" # Cloudflare dashboard > right sidebar on any domain, or account home
-
 # Get one at https://platform.openai.com/api-keys. Billed per token, outside Render entirely.
 openai_api_key = "sk-CHANGE_ME"
-
-# Generate manually at Cloudflare dashboard > R2 > Manage API tokens — see r2_storage.tf for why
-# this one credential pair isn't Terraform-managed.
-r2_access_key_id     = "CHANGE_ME"
-r2_secret_access_key = "CHANGE_ME"
 
 # Leave as the placeholder on your FIRST apply, then set to the real frontend_url output and
 # apply again — see variables.tf's cors_allowed_origin for why.

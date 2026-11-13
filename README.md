@@ -753,7 +753,7 @@ cd infra/bootstrap
 terraform destroy
 ```
 
-## Free live demo (Render + Cloudflare R2)
+## Free live demo (Render)
 
 > **Status: infrastructure-as-code is complete and `terraform validate`-clean (including
 > inspecting the real provider schema locally — see `infra-render/`), but not yet applied.**
@@ -772,7 +772,6 @@ flowchart TB
     RSite --> Browser
     Browser -->|HTTP| RWeb
     RWeb --> RPG[(Render Postgres<br/>pgvector, free, 30-day expiry)]
-    RWeb --> R2[(Cloudflare R2<br/>uploaded PDFs, free)]
 ```
 
 Render builds and redeploys directly from your GitHub repo on every push — once connected, there
@@ -781,40 +780,40 @@ GitHub Actions to do that work). `.github/workflows/terraform-plan-render.yml` s
 `fmt`/`validate`/`plan` on pull requests touching `infra-render/`, for the same reviewability
 reason as the AWS one.
 
-Two honest caveats, not glossed over:
+Three honest caveats, not glossed over:
 - **Free Render Postgres expires 30 days after creation** (confirmed from Render's own
   changelog), with a 14-day grace period before data loss. Recreating it is just `terraform
   apply` again — but it's a real recurring chore, not a "set and forget" database.
-- **The R2 API credentials the app authenticates with aren't Terraform-managed** — Cloudflare
-  doesn't expose "R2 token with S3 credentials" as a Terraform resource today. You generate one
-  by hand, once, at Cloudflare dashboard → R2 → Manage API tokens. This is the one real
-  "created by hand" step in an otherwise fully-declarative setup.
+- **Uploaded PDFs don't persist** — `Storage:Provider` is left at its default, "Local", because
+  every S3-compatible object storage provider checked (Cloudflare R2, and Backblaze B2's current
+  terms were too unclear to trust) turned out to need a card too, same as AWS. Free Render web
+  services have an ephemeral filesystem, so a file uploaded in one session is gone once the
+  service restarts (after ~15 minutes idle). Good enough to demo live; not a place to leave real
+  documents.
+- **Free web services spin down after 15 minutes of inactivity** and take about a minute to wake
+  back up on the next request — expect a cold-start delay the first time you (or an interviewer)
+  open the link after it's been idle.
 
 ### One-time setup
 
-1. **Create a Render account** at render.com (no card required) and connect your GitHub account
-   under Account Settings → GitHub, giving it access to this repo.
+1. **Create a Render account** at render.com (no card required). During signup or from **"+ New"
+   → "Web Service"**, connect your GitHub account and give Render access to this repo — that's
+   the one-time OAuth step Terraform can't do for you.
 2. **Generate a Render API key** at dashboard.render.com/u/settings#api-keys.
-3. **Create a Cloudflare account** (no card required for R2's free tier) and note your account ID
-   (right sidebar on the dashboard).
-4. **Generate an R2 API token** at Cloudflare dashboard → R2 → Manage API tokens, scoped to the
-   bucket you're about to create, with Object Read & Write permission.
-5. **Generate a Cloudflare API token** (for Terraform to manage the R2 bucket itself) at
-   dashboard → My Profile → API Tokens, with R2 edit permission.
-6. **Fill in `infra-render/terraform.tfvars`** from `terraform.tfvars.example`.
-7. **Apply:**
+3. **Fill in `infra-render/terraform.tfvars`** from `terraform.tfvars.example` (just your OpenAI
+   key to start).
+4. **Apply:**
    ```powershell
    $env:RENDER_API_KEY = "..."
    $env:RENDER_OWNER_ID = "..."
-   $env:CLOUDFLARE_API_TOKEN = "..."
    cd infra-render
    terraform init
    terraform plan
    terraform apply
    ```
-8. **Fix the CORS chicken-and-egg**: note the `frontend_url` output, set `cors_allowed_origin` in
+5. **Fix the CORS chicken-and-egg**: note the `frontend_url` output, set `cors_allowed_origin` in
    `terraform.tfvars` to that exact value, then `terraform apply` once more.
-9. Open `frontend_url` in a browser.
+6. Open `frontend_url` in a browser.
 
 ### Tearing it down
 

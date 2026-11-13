@@ -26,28 +26,6 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
-variable "cloudflare_account_id" {
-  description = "Your Cloudflare account ID (dashboard right sidebar on any domain, or account home)."
-  type        = string
-}
-
-variable "storage_bucket_name" {
-  description = "R2 bucket name for uploaded PDFs."
-  type        = string
-  default     = "documind-ai-storage"
-}
-
-variable "r2_access_key_id" {
-  description = "R2 API token's Access Key ID. R2 tokens with S3 API credentials aren't creatable via Terraform today — generate one manually at Cloudflare dashboard > R2 > Manage API tokens, scoped to just this bucket, and never commit it."
-  type        = string
-  sensitive   = true
-}
-
-variable "r2_secret_access_key" {
-  type      = string
-  sensitive = true
-}
-
 variable "cors_allowed_origin" {
   description = <<-EOT
     The frontend's real URL, e.g. "https://documind-ai-frontend.onrender.com" — needed by the

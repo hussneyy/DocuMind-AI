@@ -6,14 +6,6 @@ terraform {
       source  = "render-oss/render"
       version = "~> 1.9"
     }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "~> 5.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
-    }
   }
 
   # Local state, deliberately — this deployment path exists specifically to avoid needing an

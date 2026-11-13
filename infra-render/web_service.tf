@@ -19,11 +19,12 @@ resource "render_web_service" "api" {
     Database__MigrateOnStartup  = { value = "true" }
     ConnectionStrings__Postgres = { value = render_postgres.main.connection_info.internal_connection_string }
 
-    Storage__Provider        = { value = "S3" }
-    Storage__BucketName      = { value = var.storage_bucket_name }
-    Storage__ServiceUrl      = { value = "https://${var.cloudflare_account_id}.r2.cloudflarestorage.com" }
-    Storage__AccessKeyId     = { value = var.r2_access_key_id }
-    Storage__SecretAccessKey = { value = var.r2_secret_access_key }
+    # Storage:Provider is left unset deliberately — "Local" is the app's default, and it's the
+    # right choice here: Cloudflare R2 (and every other S3-compatible provider checked) turned
+    # out to need a card too, so this avoids a second account entirely. The real trade-off: free
+    # Render web services have an ephemeral filesystem, so uploaded PDFs are lost whenever the
+    # service restarts (after ~15 min idle). Fine for a live demo you drive yourself; not meant
+    # to hold onto files long-term. See the README for this called out explicitly.
 
     Embedding__Provider = { value = "OpenAI" }
     Embedding__ApiKey   = { value = var.openai_api_key }
