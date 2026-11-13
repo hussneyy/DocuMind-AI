@@ -19,6 +19,15 @@ resource "render_web_service" "api" {
     Database__MigrateOnStartup  = { value = "true" }
     ConnectionStrings__Postgres = { value = render_postgres.main.connection_info.internal_connection_string }
 
+    # Render's free plan gives only 512MB RAM and 0.1 CPU. .NET's default Server GC sizes itself
+    # off perceived CPU/memory and is tuned for much larger machines; under this tight a
+    # container it was crashing the process outright (segfault, exit 139) during EF Core's first
+    # heavy operation (the startup migration). Workstation GC plus an explicit, conservative heap
+    # cap is the standard fix for .NET on small containers.
+    DOTNET_gcServer        = { value = "0" }
+    DOTNET_gcConcurrent    = { value = "0" }
+    DOTNET_GCHeapHardLimit = { value = "10000000" } # hex, ~256MB — leaves headroom for the runtime/OS within the 512MB total
+
     # Storage:Provider is left unset deliberately — "Local" is the app's default, and it's the
     # right choice here: Cloudflare R2 (and every other S3-compatible provider checked) turned
     # out to need a card too, so this avoids a second account entirely. The real trade-off: free
