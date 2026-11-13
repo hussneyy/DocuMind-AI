@@ -20,13 +20,20 @@ resource "render_web_service" "api" {
     ConnectionStrings__Postgres = { value = render_postgres.main.connection_info.internal_connection_string }
 
     # Render's free plan gives only 512MB RAM and 0.1 CPU. .NET's default Server GC sizes itself
-    # off perceived CPU/memory and is tuned for much larger machines; under this tight a
-    # container it was crashing the process outright (segfault, exit 139) during EF Core's first
-    # heavy operation (the startup migration). Workstation GC plus an explicit, conservative heap
-    # cap is the standard fix for .NET on small containers.
+    # off perceived CPU/memory and is tuned for much larger machines, so constrained it anyway —
+    # but that alone didn't fix the crash (same exit 139, same exact stack trace, so GC sizing
+    # wasn't actually the cause).
     DOTNET_gcServer        = { value = "0" }
     DOTNET_gcConcurrent    = { value = "0" }
-    DOTNET_GCHeapHardLimit = { value = "10000000" } # hex, ~256MB — leaves headroom for the runtime/OS within the 512MB total
+    DOTNET_GCHeapHardLimit = { value = "10000000" } # hex, ~256MB
+
+    # The real cause: a known, Microsoft-documented .NET-on-Linux issue where certain sandboxed/
+    # isolated container runtimes (common on multi-tenant free tiers, to contain one customer's
+    # container from another) crash the process with a segfault during JIT compilation unless
+    # W^X (write-xor-execute) memory protection is disabled. Exactly matches the symptom: a crash
+    # deep in EF Core's first heavy JIT-compiled code path (building its internal service
+    # provider), not a managed exception.
+    DOTNET_EnableWriteXorExecute = { value = "0" }
 
     # Storage:Provider is left unset deliberately — "Local" is the app's default, and it's the
     # right choice here: Cloudflare R2 (and every other S3-compatible provider checked) turned
