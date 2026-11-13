@@ -15,24 +15,25 @@ resource "render_web_service" "api" {
   health_check_path = "/health/live"
 
   env_vars = {
-    ASPNETCORE_ENVIRONMENT      = { value = "Production" }
-    Database__MigrateOnStartup  = { value = "true" }
-    ConnectionStrings__Postgres = { value = render_postgres.main.connection_info.internal_connection_string }
+    ASPNETCORE_ENVIRONMENT     = { value = "Production" }
+    Database__MigrateOnStartup = { value = "true" }
 
-    # Render's free plan gives only 512MB RAM and 0.1 CPU. .NET's default Server GC sizes itself
-    # off perceived CPU/memory and is tuned for much larger machines, so constrained it anyway —
-    # but that alone didn't fix the crash (same exit 139, same exact stack trace, so GC sizing
-    # wasn't actually the cause).
-    DOTNET_gcServer        = { value = "0" }
-    DOTNET_gcConcurrent    = { value = "0" }
-    DOTNET_GCHeapHardLimit = { value = "10000000" } # hex, ~256MB
+    # The app was crashing (exit 139 / SIGSEGV) at the exact same point every time — inside
+    # Npgsql's connection setup during EF Core's startup migration — regardless of two other
+    # documented .NET-on-small-Linux-container fixes tried first (GC sizing below; disabling W^X
+    # memory protection, also below). Both are left in place since they're harmless, but neither
+    # was the actual cause. The next hypothesis: this is the first time anywhere in this project
+    # the app has connected to a genuinely remote, SSL-capable Postgres — locally and in CI it
+    # always talked to a plain Docker container with no SSL involved at all. Npgsql's default
+    # (SSL Mode=Prefer) still attempts SSL negotiation even when not required, which exercises a
+    # native OpenSSL code path that's a well-known source of container segfaults. Disabling it
+    # outright is a safe test here since this connection stays entirely inside Render's private
+    # network for the service's region, never touching the public internet.
+    ConnectionStrings__Postgres = { value = "${render_postgres.main.connection_info.internal_connection_string};SSL Mode=Disable" }
 
-    # The real cause: a known, Microsoft-documented .NET-on-Linux issue where certain sandboxed/
-    # isolated container runtimes (common on multi-tenant free tiers, to contain one customer's
-    # container from another) crash the process with a segfault during JIT compilation unless
-    # W^X (write-xor-execute) memory protection is disabled. Exactly matches the symptom: a crash
-    # deep in EF Core's first heavy JIT-compiled code path (building its internal service
-    # provider), not a managed exception.
+    DOTNET_gcServer              = { value = "0" }
+    DOTNET_gcConcurrent          = { value = "0" }
+    DOTNET_GCHeapHardLimit       = { value = "10000000" } # hex, ~256MB
     DOTNET_EnableWriteXorExecute = { value = "0" }
 
     # Storage:Provider is left unset deliberately — "Local" is the app's default, and it's the
